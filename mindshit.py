@@ -719,7 +719,6 @@ class Parser:
         value = function()
         while self.token.full in ops:
             op_token = self.token
-            print(op_token)
             self.next()
             value = UnaryOpNode(op_token, value)
         
@@ -738,9 +737,12 @@ def run(file_name: str, text: str) -> None:
     parser = Parser(tokens)
     ast, parse_error = parser.parse()
     
-    print(vars(ast))
+    # print(ast)
     
-    return None, None
+    if parse_error:
+        return None, parse_error
+    elif ast: # Remove this elif once compiler is implemented
+        return ast, None
 
 
 with open("main.ms") as f:
