@@ -9,7 +9,7 @@ Data types
 
 Special arrays
     int[]   Stores an array of digits for longer numbers # ! Not to be implemented
-    char[]  Stores an array of chars to form a string
+    char[]  Stores an array of chars to form a string 
 
 Variable declaration
     <type> <cell>;                  Reserve <cell> for type <type>)
@@ -70,7 +70,8 @@ During compilation, all references to functions would be replaced by their conte
 
 The function above can be called via the following syntax:
     add: <a>, <b>;
-...or can apply its return value 
+...or can apply its return value with the following:
+    add(<a>, <b>)
 
 Print
     print: '<char>';
@@ -574,7 +575,7 @@ class ReassignNode(Node):
         self.value = value
 
 class IfNode(Node):
-    def __init__(self, parent: any, condition: ValueNode, body: List[any]) -> None:
+    def __init__(self, parent: any, body: List[any], condition: ValueNode = None) -> None:
         self.parent = parent
         self.condition = condition
         self.body = body
@@ -611,8 +612,12 @@ class Parser:
             if self.token.full in [(Tk.KW, 'int'), (Tk.KW, 'char'), (Tk.KW, 'bool')]:
                 self.declaration()
             
-            if self.token.full == (Tk.KW, 'if'):
+            elif self.token.full == (Tk.KW, 'if'):
                 self.if_statement()
+            
+            elif self.token.full == (Tk.OP, '}'):
+                self.scope = self.scope.parent
+                self.next()
                 
             else:
                 self.next()
@@ -656,14 +661,30 @@ class Parser:
         decl_node.value = self.expr()
         
         self.pointers[decl_node.alias] = decl_node.cell.address
+
+        if self.token.full != (Tk.OP, ';'): raise
+
+        self.next()
         
     def if_statement(self):
-        if_node = IfNode(self.scope)
+        if_node = IfNode(self.scope, [])
+        self.scope.add_child(if_node)
         
         self.next()
         if self.token.full != (Tk.OP, '('): raise
         
         self.next()
+
+        if_node.condition = self.expr()
+
+        self.scope = if_node
+
+        self.next()
+        
+        if self.token.full != (Tk.OP, '{'): raise
+
+        self.next()    
+        
         
     # Algebra parser
         
