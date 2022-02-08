@@ -63,14 +63,18 @@ If-elif-else statement
 
 Function (inline)
     fn add(int a, int b) -> int {
-        return a + b;
+        return: a + b;
     }
 During compilation, all references to functions would be replaced by their contents.
 # ! Recursive functions are not possible with inline functions.
 
+The function above can be called via the following syntax:
+    add: <a>, <b>;
+...or can apply its return value 
+
 Print
-    print '<char>';
-    print "<string>";
+    print: '<char>';
+    print: "<string>";
 
 Read
     char <cell> <id>: read; Store input without modification
@@ -83,10 +87,7 @@ Delete identifier
 
 
 # Imports
-from types import CellType
-from typing import TypeVar
-
-from matplotlib.pyplot import cla
+from typing import TypeVar, Union, List
 Self = TypeVar('Self')
 
 
@@ -191,6 +192,7 @@ class Tk:
     INT = 'int'
     FLOAT = 'float'
     CHAR = 'char'
+    BOOL = 'bool'
     STR = 'string'
 
     EOF = 'eof'
@@ -210,6 +212,10 @@ class Tk:
         # Boolean values
         'true',
         'false',
+        
+        'and',
+        'or',
+        'not',
         
         # Variable declarations
         'int', # Integer from 0-255
@@ -235,7 +241,7 @@ class Token:
         if end:
             self.end = end.copy()
     
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         if self.value != None:
             if type(self.value) == str:
                 return f'[{self.type}: \'{self.value}\']'
@@ -265,7 +271,7 @@ class Lexer:
         
         return self
     
-    def lex(self) -> list[Token]:
+    def lex(self) -> List[Token]:
         tokens = []
         
         while self.char != None:
@@ -277,48 +283,6 @@ class Lexer:
 
             elif self.char in LETTERS:
                 tokens.append(self.make_text())
-                
-            elif self.char == '@':
-                tokens.append(Token(Tk.OP, '@', self.pos))
-                self.next()
-
-            elif self.char == ';':
-                tokens.append(Token(Tk.OP, ';', self.pos))
-                self.next()
-            
-            elif self.char == '(':
-                tokens.append(Token(Tk.OP, '(', self.pos))
-                self.next()
-            
-            elif self.char == ')':
-                tokens.append(Token(Tk.OP, ')', self.pos))
-                self.next()
-            
-            elif self.char == '[':
-                tokens.append(Token(Tk.OP, '[', self.pos))
-                self.next()
-            
-            elif self.char == ']':
-                tokens.append(Token(Tk.OP, ']', self.pos))
-                self.next()
-            
-            elif self.char == '{':
-                tokens.append(Token(Tk.OP, '{', self.pos))
-                self.next()
-            
-            elif self.char == '}':
-                tokens.append(Token(Tk.OP, '}', self.pos))
-                self.next()
-            
-            elif self.char == "'":
-                token, error = self.make_char()
-                if error: return [], error
-                tokens.append(token)
-            
-            elif self.char == '"':
-                token, error = self.make_string()
-                if error: return [], error
-                tokens.append(token)
             
             elif self.chars(2) == ':=':
                 token, error = self.make_long_assign(':=')
@@ -355,6 +319,92 @@ class Lexer:
                 
             elif self.chars(2) == '/*':
                 self.skip_multiline_comment()
+                
+            elif self.chars(2) == '!=':
+                tokens.append(Token(Tk.OP, '!=', self.pos))
+                self.next(2)
+                
+            elif self.chars(2) == '>=':
+                tokens.append(Token(Tk.OP, '>=', self.pos))
+                self.next(2)
+                
+            elif self.chars(2) == '<=':
+                tokens.append(Token(Tk.OP, '<=', self.pos))
+                self.next(2)
+                
+            elif self.char == '=':
+                tokens.append(Token(Tk.OP, '=', self.pos))
+                self.next()
+            
+            elif self.char == '>':
+                tokens.append(Token(Tk.OP, '>', self.pos))
+                self.next()
+            
+            elif self.char == '<':
+                tokens.append(Token(Tk.OP, '<', self.pos))
+                self.next()
+                
+            elif self.char == '@':
+                tokens.append(Token(Tk.OP, '@', self.pos))
+                self.next()
+
+            elif self.char == ';':
+                tokens.append(Token(Tk.OP, ';', self.pos))
+                self.next()
+            
+            elif self.char == '(':
+                tokens.append(Token(Tk.OP, '(', self.pos))
+                self.next()
+            
+            elif self.char == ')':
+                tokens.append(Token(Tk.OP, ')', self.pos))
+                self.next()
+            
+            elif self.char == '[':
+                tokens.append(Token(Tk.OP, '[', self.pos))
+                self.next()
+            
+            elif self.char == ']':
+                tokens.append(Token(Tk.OP, ']', self.pos))
+                self.next()
+            
+            elif self.char == '{':
+                tokens.append(Token(Tk.OP, '{', self.pos))
+                self.next()
+            
+            elif self.char == '}':
+                tokens.append(Token(Tk.OP, '}', self.pos))
+                self.next()
+            
+            elif self.char == '+':
+                tokens.append(Token(Tk.OP, '+', self.pos))
+                self.next()
+            
+            elif self.char == '-':
+                tokens.append(Token(Tk.OP, '-', self.pos))
+                self.next()
+            
+            elif self.char == '*':
+                tokens.append(Token(Tk.OP, '*', self.pos))
+                self.next()
+            
+            elif self.char == '/':
+                tokens.append(Token(Tk.OP, '/', self.pos))
+                self.next()
+            
+            elif self.char == '%':
+                tokens.append(Token(Tk.OP, '%', self.pos))
+                self.next()
+            
+            elif self.char == "'":
+                token, error = self.make_char()
+                if error: return [], error
+                tokens.append(token)
+            
+            elif self.char == '"':
+                token, error = self.make_string()
+                if error: return [], error
+                tokens.append(token)
 
             else:
                 return [], IllegalCharError(f"'{self.char}'", self.pos)
@@ -370,7 +420,7 @@ class Lexer:
         
         for _ in range(length):
             if pointer.index >= len(self.text):
-                raise IndexError('char length is too long')
+                return None
             
             chars += self.text[pointer.index]
             pointer.next(self.text[pointer.index])
@@ -455,7 +505,226 @@ class Lexer:
             self.next()
         
         self.next(2)
+        
 
+
+###################################################
+# PARSER
+###################################################
+
+# Nodes
+class Node:
+    def __repr__(self) -> str:
+        return str(vars(self))
+
+class CellNode(Node):
+    def __init__(self, address) -> None:
+        self.address = address
+
+class TypeNode(Node):
+    def __init__(self, type: str, length: int = 1, datatype: Self = None) -> None:
+        self.type = type
+        self.length = length
+        
+        if type == 'array':
+            self.datatype = datatype
+
+class ValueNode(Node):
+    def __init__(self, type: TypeNode, value: Union[int, List[Self]]) -> None:
+        self.type = type
+        self.value = value
+        
+    def __repr__(self) -> str:
+        return f'[{self.type}, {self.value}]'
+
+class BinaryOpNode(Node):
+    def __init__(self, left: ValueNode, token: Token, right: ValueNode) -> None:
+        self.left = left
+        self.token = token
+        self.right = right
+    
+    def __repr__(self) -> str:
+        return f'({self.left}, {self.token}, {self.right})'
+        
+class UnaryOpNode(Node):
+    def __init__(self, token: Token, value: ValueNode) -> None:
+        self.token = token
+        self.value = value
+    
+    def __repr__(self) -> str:
+        return f'({self.token}, {self.value})'
+        
+class FnCallNode(Node):
+    def __init__(self, name: str) -> None:
+        self.name = name
+    
+class DeclarationNode(Node):
+    def __init__(self, parent: any, datatype: TypeNode, cell: CellNode = None, alias: str = None, value: ValueNode = None) -> None:
+        self.parent = parent
+        self.datatype = datatype
+        self.cell = cell
+        self.alias = alias
+        self.value = value
+
+class ReassignNode(Node):
+    def __init__(self, parent: any, cell: CellNode = None, alias: str = None, value: ValueNode = None) -> None:
+        self.parent = parent
+        self.cell = cell
+        self.alias = alias
+        self.value = value
+
+class IfNode(Node):
+    def __init__(self, parent: any, condition: ValueNode, body: List[any]) -> None:
+        self.parent = parent
+        self.condition = condition
+        self.body = body
+    
+    def add_child(self, node) -> any:
+        self.body.append(node)
+        return node
+
+class MainNode(Node):
+    def __init__(self, body: List[any]) -> None:
+        self.body = body
+        
+    def add_child(self, node) -> any:
+        self.body.append(node)
+        return node
+
+
+class Parser:
+    def __init__(self, tokens: List[Token]):
+        self.tokens = tokens
+        self.index = -1
+        self.scope = MainNode([])
+        self.pointers = {}
+        self.next()
+    
+    def next(self, index: int = 1):
+        self.index += index
+        self.token = self.tokens[self.index] if self.index < len(self.tokens) else None
+        return self.token
+    
+    def parse(self) -> MainNode:
+        self.scope = MainNode([])
+        while self.token != None:
+            if self.token.full in [(Tk.KW, 'int'), (Tk.KW, 'char'), (Tk.KW, 'bool')]:
+                self.declaration()
+            
+            if self.token.full == (Tk.KW, 'if'):
+                self.if_statement()
+                
+            else:
+                self.next()
+        
+        return self.scope, None
+    
+    def declaration(self):
+        decl_node = DeclarationNode(self.scope, TypeNode(self.token.value))
+        self.scope.add_child(decl_node)
+        
+        type_ = self.token.value
+        
+        self.next()
+        
+        if self.token.full == (Tk.OP, '['):
+            self.next()
+            if self.token.type != Tk.INT: raise
+            decl_node.datatype = TypeNode('array', self.token.value, type_)
+                
+            self.next()
+            if self.token.full != (Tk.OP, ']'): raise
+            
+            self.next()
+        
+        if self.token.full != (Tk.OP, '@'): raise
+        
+        self.next()
+        if self.token.type != Tk.INT: raise
+        decl_node.cell = CellNode(self.token.value)
+        
+        self.next()
+            
+        if self.token.type != Tk.ID: raise
+        decl_node.alias = self.token.value
+        
+        self.next()
+        if self.token.full != (Tk.OP, ':='): raise
+        
+        self.next()
+        
+        decl_node.value = self.expr()
+        
+        self.pointers[decl_node.alias] = decl_node.cell.address
+        
+    def if_statement(self):
+        if_node = IfNode(self.scope)
+        
+        self.next()
+        if self.token.full != (Tk.OP, '('): raise
+        
+        self.next()
+        
+    # Algebra parser
+        
+    def factor(self):
+        token = self.token
+        
+        if self.token.type in [Tk.INT, Tk.FLOAT, Tk.CHAR]:
+            self.next()
+            return ValueNode(token.type, token.value)
+        
+        elif self.token.full in [(Tk.KW, 'true'), (Tk.KW, 'false')]:
+            self.next()
+            return ValueNode('bool', token.value)
+        
+        elif self.token.type == Tk.ID and self.token.value in self.pointers:
+            self.next()
+            return CellNode(self.pointers[token.value])
+        
+        elif self.token.full == (Tk.OP, '('):
+            self.next()
+            expr = self.expr()
+            if self.token.full == (Tk.OP, ')'):
+                self.next()
+                return expr
+        
+    def term(self):
+        return self.binary_op(self.factor, ((Tk.OP, '*'), (Tk.OP, '/'), (Tk.OP, '%')))
+    
+    def arith_expr(self):
+        return self.binary_op(self.term, ((Tk.OP, '+'), (Tk.OP, '-')))
+    
+    def comp_expr(self):
+        return self.binary_op(self.arith_expr, ((Tk.OP, '='), (Tk.OP, '>'), (Tk.OP, '<'), (Tk.OP, '>='), (Tk.OP, '<='), (Tk.OP, '!=')))
+    
+    def not_expr(self):
+        return self.unary_op(self.comp_expr, [(Tk.KW, 'not')])
+    
+    def expr(self):
+        return self.binary_op(self.not_expr, ((Tk.KW, 'and'), (Tk.KW, 'or')))
+    
+    def binary_op(self, function, ops):
+        left = function()
+        
+        while self.token.full in ops:
+            op_token = self.token
+            self.next()
+            right = function()
+            left = BinaryOpNode(left, op_token, right)
+            
+        return left
+    
+    def unary_op(self, function, ops):
+        value = function()
+        while self.token.full in ops:
+            op_token = self.token
+            print(op_token)
+            self.next()
+            value = UnaryOpNode(op_token, value)
+        
+        return value
+        
 
 def run(file_name: str, text: str) -> None:
     lexer = Lexer(file_name, text)
@@ -465,6 +734,11 @@ def run(file_name: str, text: str) -> None:
         return None, error
     
     print(", ".join(map(lambda x: x.__str__(), tokens)))
+    
+    parser = Parser(tokens)
+    ast, parse_error = parser.parse()
+    
+    print(vars(ast))
     
     return None, None
 
