@@ -87,7 +87,7 @@ Delete identifier
 
 
 # Imports
-from typing import TypeVar, Union, List
+from typing import TypeVar, Union, List, Tuple
 Self = TypeVar('Self')
 
 
@@ -605,7 +605,7 @@ class Parser:
         self.token = self.tokens[self.index] if self.index < len(self.tokens) else None
         return self.token
     
-    def parse(self) -> MainNode:
+    def parse(self) -> Tuple[MainNode, Error]:
         self.scope = MainNode([])
         while self.token != None:
             if self.token.full in [(Tk.KW, 'int'), (Tk.KW, 'char'), (Tk.KW, 'bool')]:
