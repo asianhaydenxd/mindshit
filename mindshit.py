@@ -776,7 +776,9 @@ def run(file_name: str, text: str) -> None:
     if error:
         return None, error
     
-    print(", ".join(map(lambda x: x.__str__(), tokens)))
+    token_json = json.loads(str(list(map(lambda x: x.__str__(), tokens))))
+    with open('debug/tokens.json', 'w') as token_json_file:
+        json.dump(token_json, token_json_file, indent=4)
     
     parser = Parser(tokens)
     ast, parse_error = parser.parse()
