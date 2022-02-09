@@ -1,64 +1,8 @@
 {
     "body": [
         {
-            "datatype": {
-                "type": "int",
-                "length": 1
-            },
-            "cell": {
-                "address": 0
-            },
-            "alias": "i",
-            "value": {
-                "type": "int",
-                "value": 10
-            }
-        },
-        {
-            "datatype": {
-                "type": "int",
-                "length": 1
-            },
-            "cell": {
-                "address": 2
-            },
-            "alias": "j",
-            "value": {
-                "type": "int",
-                "value": 20
-            }
-        },
-        {
-            "condition": {
-                "type": "bool",
-                "value": "true"
-            },
-            "body": [
-                {
-                    "name": "print",
-                    "fn": [
-                        {
-                            "command": "move",
-                            "argument": {
-                                "param_num": 0
-                            }
-                        },
-                        {
-                            "command": "output",
-                            "argument": null
-                        }
-                    ],
-                    "params": [
-                        {
-                            "address": 0
-                        },
-                        {
-                            "address": 0
-                        }
-                    ]
-                }
-            ],
-            "else_node": null
+            "command": "set",
+            "argument": 3
         }
     ]
 }

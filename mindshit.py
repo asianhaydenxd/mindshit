@@ -229,7 +229,7 @@ class Tk:
         # Brainfuck Instructions
         'move',
         'right',
-        'left'
+        'left',
         'set',
         'add',
         'sub',
