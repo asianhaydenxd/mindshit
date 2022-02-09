@@ -361,10 +361,6 @@ class Lexer:
                 tokens.append(Token(Tk.OP, '@', self.pos))
                 self.next()
             
-            elif self.char == ';':
-                tokens.append(Token(Tk.OP, ';', self.pos))
-                self.next()
-            
             elif self.char == '(':
                 tokens.append(Token(Tk.OP, '(', self.pos))
                 self.next()
@@ -755,16 +751,19 @@ class Parser:
             
             self.next()
         
-        if self.token.full != (Tk.OP, '@'): raise
-        
-        self.next()
-        
-        if self.token.type != Tk.INT: raise
-
-        decl_node.cell = CellNode(self.token.value)
-        
-        self.next()
+        if self.token.full == (Tk.OP, '@'):
+            self.next()
             
+            if self.token.type != Tk.INT: raise
+
+            decl_node.cell = CellNode(self.token.value)
+            
+            self.next()
+        else:
+            decl_node.cell = CellNode((list(self.pointers.values())[-1] + 2) if list(self.pointers.values()) else 0)
+            
+        print(self.token)
+        
         if self.token.type != Tk.ID: raise
 
         decl_node.alias = self.token.value
@@ -776,10 +775,6 @@ class Parser:
         self.next()
         decl_node.value = self.expr()
         self.pointers[decl_node.alias] = decl_node.cell.address
-
-        if self.token.full != (Tk.OP, ';'): raise
-
-        self.next()
         
     def if_statement(self):
         if_node = IfNode([])
