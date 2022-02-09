@@ -398,6 +398,10 @@ class Lexer:
                 tokens.append(Token(Tk.OP, '%', self.pos))
                 self.next()
             
+            elif self.char == ',':
+                tokens.append(Token(Tk.OP, ',', self.pos))
+                self.next()
+            
             elif self.char == "'":
                 token, error = self.make_char()
                 if error: return [], error
@@ -689,7 +693,11 @@ class Parser:
         
         self.next()
         
-        fn_call_node.params.append(self.expr())
+        while self.token.full != (Tk.OP, ';'):
+            fn_call_node.params.append(self.expr())
+            self.next()
+            if self.token.full == (Tk.OP, ','):
+                self.next()
         
         self.scope.add_child(fn_call_node)
         

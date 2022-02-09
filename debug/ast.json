@@ -61,6 +61,18 @@
                     "params": [
                         {
                             "address": 0
+                        },
+                        {
+                            "type": "int",
+                            "value": 10
+                        },
+                        {
+                            "type": "string",
+                            "value": "hello"
+                        },
+                        {
+                            "type": "bool",
+                            "value": "true"
                         }
                     ]
                 }
