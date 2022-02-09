@@ -575,9 +575,19 @@ class ReassignNode(Node):
         self.value = value
 
 class IfNode(Node):
-    def __init__(self, parent: any, body: List[any], condition: ValueNode = None) -> None:
+    def __init__(self, parent: any, body: List[any], else_node: List[any] = None, condition: ValueNode = None) -> None:
         self.parent = parent
         self.condition = condition
+        self.body = body
+        self.else_node = else_node
+    
+    def add_child(self, node) -> any:
+        self.body.append(node)
+        return node
+    
+class ElseNode(Node):
+    def __init__(self, parent: any, body: List[any]) -> None:
+        self.parent = parent
         self.body = body
     
     def add_child(self, node) -> any:
@@ -616,8 +626,13 @@ class Parser:
                 self.if_statement()
             
             elif self.token.full == (Tk.OP, '}'):
+                block_node = self.scope # Get the block node
                 self.scope = self.scope.parent
                 self.next()
+
+                # If the block node that was just terminated is an if node, check if 'else' follows
+                if self.token.full == (Tk.KW, 'else') and type(block_node) == IfNode:
+                    self.else_statement()
                 
             else:
                 self.next()
@@ -645,21 +660,23 @@ class Parser:
         if self.token.full != (Tk.OP, '@'): raise
         
         self.next()
+        
         if self.token.type != Tk.INT: raise
+
         decl_node.cell = CellNode(self.token.value)
         
         self.next()
             
         if self.token.type != Tk.ID: raise
+
         decl_node.alias = self.token.value
         
         self.next()
+
         if self.token.full != (Tk.OP, ':='): raise
         
         self.next()
-        
         decl_node.value = self.expr()
-        
         self.pointers[decl_node.alias] = decl_node.cell.address
 
         if self.token.full != (Tk.OP, ';'): raise
@@ -674,16 +691,23 @@ class Parser:
         if self.token.full != (Tk.OP, '('): raise
         
         self.next()
-
         if_node.condition = self.expr()
-
         self.scope = if_node
 
         self.next()
-        
         if self.token.full != (Tk.OP, '{'): raise
 
-        self.next()    
+        self.next()
+
+    def else_statement(self):
+        else_node = ElseNode(self.scope, [])
+        self.scope.else_node = else_node
+        self.scope = else_node
+
+        self.next()
+        if self.token.full != (Tk.OP, '{'): raise
+
+        self.next()
         
         
     # Algebra parser
