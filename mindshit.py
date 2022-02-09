@@ -794,8 +794,12 @@ def run(file_name: str, text: str) -> None:
         return ast, None
 
 
-with open("main.ms") as f:
-    result, error = run("main.ms", f.read())
+def main():
+    with open("main.ms") as f:
+        result, error = run("main.ms", f.read())
 
-if error:
-    print(error)
+    if error:
+        print(error)
+
+if __name__ == '__main__':
+    main()
