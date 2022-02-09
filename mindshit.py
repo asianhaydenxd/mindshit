@@ -360,7 +360,7 @@ class Lexer:
             elif self.char == '@':
                 tokens.append(Token(Tk.OP, '@', self.pos))
                 self.next()
-
+            
             elif self.char == ';':
                 tokens.append(Token(Tk.OP, ';', self.pos))
                 self.next()
@@ -658,9 +658,7 @@ class Parser:
                 self.next()
                 if self.token.type == 'int':
                     instruction.argument = int(self.token.value)
-                    self.next()
-                    
-                if self.token.full != (Tk.OP, ';'): raise   
+                    self.next() 
                  
                 self.scope.add_child(instruction)
             
@@ -730,9 +728,8 @@ class Parser:
         
         self.next()
         
-        while self.token.full != (Tk.OP, ';'):
+        while self.token.full != (Tk.OP, ')'):
             fn_call_node.params.append(self.expr())
-            self.next()
             if self.token.full == (Tk.OP, ','):
                 self.next()
         
