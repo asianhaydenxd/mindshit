@@ -57,22 +57,43 @@
                 },
                 {
                     "name": "print",
-                    "fn": [],
+                    "fn": [
+                        {
+                            "parent": {
+                                "parent": {},
+                                "name": "print",
+                                "params": [
+                                    {
+                                        "parent": {},
+                                        "alias": "output"
+                                    }
+                                ],
+                                "body": []
+                            },
+                            "command": "move",
+                            "argument": {
+                                "param_num": 0
+                            }
+                        },
+                        {
+                            "parent": {
+                                "parent": {},
+                                "name": "print",
+                                "params": [
+                                    {
+                                        "parent": {},
+                                        "alias": "output"
+                                    }
+                                ],
+                                "body": []
+                            },
+                            "command": "output",
+                            "argument": 1
+                        }
+                    ],
                     "params": [
                         {
                             "address": 0
-                        },
-                        {
-                            "type": "int",
-                            "value": 10
-                        },
-                        {
-                            "type": "string",
-                            "value": "hello"
-                        },
-                        {
-                            "type": "bool",
-                            "value": "true"
                         }
                     ]
                 }

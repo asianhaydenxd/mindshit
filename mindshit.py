@@ -88,6 +88,7 @@ Delete identifier
 
 # Imports
 from ast import Param
+from codeop import CommandCompiler
 from platform import node
 from typing import TypeVar, Union, List, Tuple
 import json
@@ -224,6 +225,16 @@ class Tk:
         'float', # Floating point; 
         'char', # Character from 0-255 in extended ASCII
         'bool', # Boolean value set to either 255 (true) or 0 (false)
+        
+        # Brainfuck Instructions
+        'move',
+        'right',
+        'left'
+        'set',
+        'add',
+        'sub',
+        'output',
+        'input',
     ]
 
 
@@ -570,9 +581,19 @@ class ParamNode(Node):
     def __init__(self, parent: any, alias: str) -> None:
         self.parent = parent
         self.alias = alias
+
+class ParamCallNode(Node):
+    def __init__(self, param_num: int) -> None:
+        self.param_num = param_num
+
+class InstructionNode(Node):
+    def __init__(self, parent, command: str, argument: int = 1) -> None:
+        self.parent = parent
+        self.command = command
+        self.argument = argument
         
 class FnNode(Node):
-    def __init__(self, parent: any, name: str, params: List[ParamNode], body: List[any]) -> None:
+    def __init__(self, parent: any, name: str, params: List[ParamNode] = None, body: List[any] = None) -> None:
         self.parent = parent
         self.name = name
         self.params = params
@@ -636,6 +657,17 @@ class Parser:
             if self.token.full in [(Tk.KW, 'int'), (Tk.KW, 'char'), (Tk.KW, 'bool')]:
                 self.declaration()
             
+            elif self.token.full in [(Tk.KW, 'move'), (Tk.KW, 'right'), (Tk.KW, 'left'), (Tk.KW, 'set'), (Tk.KW, 'add'), (Tk.KW, 'sub'), (Tk.KW, 'output'), (Tk.KW, 'input')]:
+                instruction = InstructionNode(self.scope, self.token.value)
+                self.next()
+                if self.token.type == 'int':
+                    instruction.argument = int(self.token.value)
+                    self.next()
+                    
+                if self.token.full != (Tk.OP, ';'): raise   
+                 
+                self.scope.add_child(instruction)
+            
             elif self.token.full == (Tk.KW, 'if'):
                 self.if_statement()
             
@@ -666,8 +698,9 @@ class Parser:
                 self.next()
                 if self.token.full == (Tk.ID, 'std'):
                     # Standard library
-                    print_fn = FnNode(self.scope, 'print', [], [])
-                    print_fn.params.append(ParamNode(print_fn, 'output'))
+                    print_fn = FnNode(self.scope, 'print')
+                    print_fn.params = [ParamNode(print_fn, 'output')]
+                    print_fn.body = [InstructionNode(print_fn, 'move', ParamCallNode(0)), InstructionNode(print_fn, 'output')]
                     self.functions.append(print_fn)
                     
                     read_fn = FnNode(self.scope, 'read', [], [])
