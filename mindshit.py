@@ -563,23 +563,20 @@ class UnaryOpNode(Node):
         self.value = value
     
 class DeclarationNode(Node):
-    def __init__(self, parent: any, datatype: TypeNode, cell: CellNode = None, alias: str = None, value: ValueNode = None) -> None:
-        self.parent = parent
+    def __init__(self, datatype: TypeNode, cell: CellNode = None, alias: str = None, value: ValueNode = None) -> None:
         self.datatype = datatype
         self.cell = cell
         self.alias = alias
         self.value = value
 
 class ReassignNode(Node):
-    def __init__(self, parent: any, cell: CellNode = None, alias: str = None, value: ValueNode = None) -> None:
-        self.parent = parent
+    def __init__(self, cell: CellNode = None, alias: str = None, value: ValueNode = None) -> None:
         self.cell = cell
         self.alias = alias
         self.value = value
 
 class ParamNode(Node):
-    def __init__(self, parent: any, alias: str) -> None:
-        self.parent = parent
+    def __init__(self, alias: str) -> None:
         self.alias = alias
 
 class ParamCallNode(Node):
@@ -587,14 +584,14 @@ class ParamCallNode(Node):
         self.param_num = param_num
 
 class InstructionNode(Node):
-    def __init__(self, parent, command: str, argument: int = 1) -> None:
-        self.parent = parent
+    def __init__(self, command: str, argument: Union[int, ParamCallNode] = None) -> None:
         self.command = command
         self.argument = argument
+        if argument == None and command in ['right', 'left', 'add', 'sub']:
+            self.argument = 1
         
 class FnNode(Node):
-    def __init__(self, parent: any, name: str, params: List[ParamNode] = None, body: List[any] = None) -> None:
-        self.parent = parent
+    def __init__(self, name: str, params: List[ParamNode] = None, body: List[any] = None) -> None:
         self.name = name
         self.params = params
         self.body = body
@@ -606,8 +603,7 @@ class FnCallNode(Node):
         self.params = params
 
 class IfNode(Node):
-    def __init__(self, parent: any, body: List[any], else_node: List[any] = None, condition: ValueNode = None) -> None:
-        self.parent = parent
+    def __init__(self, body: List[any], else_node: List[any] = None, condition: ValueNode = None) -> None:
         self.condition = condition
         self.body = body
         self.else_node = else_node
@@ -617,8 +613,7 @@ class IfNode(Node):
         return node
     
 class ElseNode(Node):
-    def __init__(self, parent: any, body: List[any]) -> None:
-        self.parent = parent
+    def __init__(self, body: List[any]) -> None:
         self.body = body
     
     def add_child(self, node) -> any:
@@ -640,6 +635,7 @@ class Parser:
         self.index = -1
         
         self.scope = MainNode([])
+        self.scope_address = [self.scope]
         self.pointers = {}
         self.functions = []
         
@@ -658,7 +654,7 @@ class Parser:
                 self.declaration()
             
             elif self.token.full in [(Tk.KW, 'move'), (Tk.KW, 'right'), (Tk.KW, 'left'), (Tk.KW, 'set'), (Tk.KW, 'add'), (Tk.KW, 'sub'), (Tk.KW, 'output'), (Tk.KW, 'input')]:
-                instruction = InstructionNode(self.scope, self.token.value)
+                instruction = InstructionNode(self.token.value)
                 self.next()
                 if self.token.type == 'int':
                     instruction.argument = int(self.token.value)
@@ -676,21 +672,29 @@ class Parser:
             
             elif self.token.full == (Tk.OP, '}'):
                 block_node = self.scope # Get the block node
-                self.scope = self.scope.parent
+                self.rise_scope_address()
                 self.next()
 
                 # If the block node that was just terminated is an if node, check if 'else' follows
                 if self.token.full == (Tk.KW, 'else') and type(block_node) == IfNode:
-                    self.scope = block_node
+                    self.lower_scope_address(block_node)
                     self.else_statement()
                     
                 if type(block_node) == ElseNode:
-                    self.scope = self.scope.parent
+                    self.rise_scope_address()
                 
             else:
                 self.next()
         
         return self.scope, None
+    
+    def rise_scope_address(self):
+        self.scope_address.pop()
+        self.scope = self.scope_address[-1]
+    
+    def lower_scope_address(self, node):
+        self.scope_address.append(node)
+        self.scope = node
     
     def preprocess(self):
         while self.token != None:
@@ -698,12 +702,12 @@ class Parser:
                 self.next()
                 if self.token.full == (Tk.ID, 'std'):
                     # Standard library
-                    print_fn = FnNode(self.scope, 'print')
-                    print_fn.params = [ParamNode(print_fn, 'output')]
-                    print_fn.body = [InstructionNode(print_fn, 'move', ParamCallNode(0)), InstructionNode(print_fn, 'output')]
+                    print_fn = FnNode('print')
+                    print_fn.params = [ParamNode('output')]
+                    print_fn.body = [InstructionNode('move', ParamCallNode(0)), InstructionNode('output')]
                     self.functions.append(print_fn)
                     
-                    read_fn = FnNode(self.scope, 'read', [], [])
+                    read_fn = FnNode('read', [], [])
                     self.functions.append(read_fn)
                 
             self.next()
@@ -737,7 +741,7 @@ class Parser:
         self.next()
     
     def declaration(self):
-        decl_node = DeclarationNode(self.scope, TypeNode(self.token.value))
+        decl_node = DeclarationNode(TypeNode(self.token.value))
         self.scope.add_child(decl_node)
         
         type_ = self.token.value
@@ -781,7 +785,7 @@ class Parser:
         self.next()
         
     def if_statement(self):
-        if_node = IfNode(self.scope, [])
+        if_node = IfNode([])
         self.scope.add_child(if_node)
         
         self.next()
@@ -789,7 +793,7 @@ class Parser:
         
         self.next()
         if_node.condition = self.expr()
-        self.scope = if_node
+        self.lower_scope_address(if_node)
 
         self.next()
         if self.token.full != (Tk.OP, '{'): raise
@@ -799,9 +803,9 @@ class Parser:
     def else_statement(self):
         if type(self.scope) != IfNode: raise
         
-        else_node = ElseNode(self.scope, [])
+        else_node = ElseNode([])
         self.scope.else_node = else_node
-        self.scope = else_node
+        self.lower_scope_address(else_node)
 
         self.next()
         if self.token.full != (Tk.OP, '{'): raise
@@ -884,7 +888,7 @@ def run(file_name: str, text: str) -> None:
     ast, parse_error = parser.parse()
     
     # Load syntax tree into ast.json
-    ast_json = json.loads(str(ast).replace("'", '"').replace('...', '').replace('None', 'null'))
+    ast_json = json.loads(str(ast).replace("'", '"').replace('None', 'null'))
     with open('debug/ast.json', 'w') as ast_json_file:
         json.dump(ast_json, ast_json_file, indent=4)
     

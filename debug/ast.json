@@ -1,7 +1,6 @@
 {
     "body": [
         {
-            "parent": {},
             "datatype": {
                 "type": "int",
                 "length": 1
@@ -16,79 +15,23 @@
             }
         },
         {
-            "parent": {},
             "condition": {
-                "left": {
-                    "left": {
-                        "type": "int",
-                        "value": 1
-                    },
-                    "token": {
-                        "op": "+"
-                    },
-                    "right": {
-                        "type": "int",
-                        "value": 1
-                    }
-                },
-                "token": {
-                    "op": "="
-                },
-                "right": {
-                    "type": "int",
-                    "value": 2
-                }
+                "type": "bool",
+                "value": "true"
             },
             "body": [
-                {
-                    "parent": {},
-                    "datatype": {
-                        "type": "int",
-                        "length": 1
-                    },
-                    "cell": {
-                        "address": 0
-                    },
-                    "alias": "i",
-                    "value": {
-                        "type": "int",
-                        "value": 10
-                    }
-                },
                 {
                     "name": "print",
                     "fn": [
                         {
-                            "parent": {
-                                "parent": {},
-                                "name": "print",
-                                "params": [
-                                    {
-                                        "parent": {},
-                                        "alias": "output"
-                                    }
-                                ],
-                                "body": []
-                            },
                             "command": "move",
                             "argument": {
                                 "param_num": 0
                             }
                         },
                         {
-                            "parent": {
-                                "parent": {},
-                                "name": "print",
-                                "params": [
-                                    {
-                                        "parent": {},
-                                        "alias": "output"
-                                    }
-                                ],
-                                "body": []
-                            },
                             "command": "output",
-                            "argument": 1
+                            "argument": null
                         }
                     ],
                     "params": [
