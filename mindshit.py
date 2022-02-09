@@ -89,6 +89,8 @@ Delete identifier
 
 # Imports
 from typing import TypeVar, Union, List, Tuple
+import json
+
 Self = TypeVar('Self')
 
 
@@ -245,11 +247,11 @@ class Token:
     def __repr__(self) -> str:
         if self.value != None:
             if type(self.value) == str:
-                return f'[{self.type}: \'{self.value}\']'
+                return '{' + f"'{self.type}': '{self.value}'" + '}'
 
-            return f'[{self.type}: {self.value}]'
+            return '{' + f"'{self.type}': {self.value}" + '}'
 
-        return f'[{self.type}]'
+        return '{' + f"'{self.type}'" + '}'
 
     def matches(self, type_: str, value: any) -> str:
         return self.type == type_ and self.value == value
@@ -534,26 +536,17 @@ class ValueNode(Node):
     def __init__(self, type: TypeNode, value: Union[int, List[Self]]) -> None:
         self.type = type
         self.value = value
-        
-    def __repr__(self) -> str:
-        return f'[{self.type}, {self.value}]'
 
 class BinaryOpNode(Node):
     def __init__(self, left: ValueNode, token: Token, right: ValueNode) -> None:
         self.left = left
         self.token = token
         self.right = right
-    
-    def __repr__(self) -> str:
-        return f'({self.left}, {self.token}, {self.right})'
         
 class UnaryOpNode(Node):
     def __init__(self, token: Token, value: ValueNode) -> None:
         self.token = token
         self.value = value
-    
-    def __repr__(self) -> str:
-        return f'({self.token}, {self.value})'
         
 class FnCallNode(Node):
     def __init__(self, name: str) -> None:
@@ -788,7 +781,10 @@ def run(file_name: str, text: str) -> None:
     parser = Parser(tokens)
     ast, parse_error = parser.parse()
     
-    # print(ast)
+    # Load syntax tree into ast.json
+    ast_json = json.loads(str(ast).replace("'", '"').replace('...', '').replace('None', 'null'))
+    with open('debug/ast.json', 'w') as ast_json_file:
+        json.dump(ast_json, ast_json_file, indent=4)
     
     if parse_error:
         return None, parse_error
@@ -801,5 +797,3 @@ with open("main.ms") as f:
 
 if error:
     print(error)
-elif result:
-    print(result)

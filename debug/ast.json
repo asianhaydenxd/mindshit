@@ -1,0 +1,113 @@
+{
+    "body": [
+        {
+            "parent": {},
+            "condition": {
+                "left": {
+                    "left": {
+                        "type": "int",
+                        "value": 1
+                    },
+                    "token": {
+                        "op": "+"
+                    },
+                    "right": {
+                        "type": "int",
+                        "value": 1
+                    }
+                },
+                "token": {
+                    "op": "="
+                },
+                "right": {
+                    "type": "int",
+                    "value": 2
+                }
+            },
+            "body": [
+                {
+                    "parent": {},
+                    "datatype": {
+                        "type": "int",
+                        "length": 1
+                    },
+                    "cell": {
+                        "address": 0
+                    },
+                    "alias": "i",
+                    "value": {
+                        "type": "int",
+                        "value": 10
+                    }
+                }
+            ],
+            "else_node": {
+                "parent": {},
+                "body": [
+                    {
+                        "parent": {},
+                        "condition": {
+                            "left": {
+                                "left": {
+                                    "type": "int",
+                                    "value": 2
+                                },
+                                "token": {
+                                    "op": "+"
+                                },
+                                "right": {
+                                    "type": "int",
+                                    "value": 2
+                                }
+                            },
+                            "token": {
+                                "op": "="
+                            },
+                            "right": {
+                                "type": "int",
+                                "value": 4
+                            }
+                        },
+                        "body": [
+                            {
+                                "parent": {},
+                                "datatype": {
+                                    "type": "int",
+                                    "length": 1
+                                },
+                                "cell": {
+                                    "address": 1
+                                },
+                                "alias": "i",
+                                "value": {
+                                    "type": "int",
+                                    "value": 20
+                                }
+                            }
+                        ],
+                        "else_node": {
+                            "parent": {},
+                            "body": [
+                                {
+                                    "parent": {},
+                                    "datatype": {
+                                        "type": "int",
+                                        "length": 1
+                                    },
+                                    "cell": {
+                                        "address": 2
+                                    },
+                                    "alias": "i",
+                                    "value": {
+                                        "type": "int",
+                                        "value": 30
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}
