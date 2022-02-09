@@ -632,7 +632,11 @@ class Parser:
 
                 # If the block node that was just terminated is an if node, check if 'else' follows
                 if self.token.full == (Tk.KW, 'else') and type(block_node) == IfNode:
+                    self.scope = block_node
                     self.else_statement()
+                    
+                if type(block_node) == ElseNode:
+                    self.scope = self.scope.parent
                 
             else:
                 self.next()
@@ -700,6 +704,8 @@ class Parser:
         self.next()
 
     def else_statement(self):
+        if type(self.scope) != IfNode: raise
+        
         else_node = ElseNode(self.scope, [])
         self.scope.else_node = else_node
         self.scope = else_node
