@@ -69,13 +69,12 @@ During compilation, all references to functions would be replaced by their conte
 # ! Recursive functions are not possible with inline functions.
 
 The function above can be called via the following syntax:
-    add: <a>, <b>;
-...or can apply its return value with the following:
-    add(<a>, <b>)
+    add(<a>, <b>);
+    
 
 Print
-    print: '<char>';
-    print: "<string>";
+    print('<char>');
+    print("<string>");
 
 Read
     char <cell> <id>: read; Store input without modification
@@ -88,6 +87,8 @@ Delete identifier
 
 
 # Imports
+from ast import Param
+from platform import node
 from typing import TypeVar, Union, List, Tuple
 import json
 
@@ -201,9 +202,7 @@ class Tk:
     EOF = 'eof'
 
     KEYWORDS = [
-        'print',
-        'read',
-        
+        'include',
         'if',
         'elif',
         'else',
@@ -547,10 +546,6 @@ class UnaryOpNode(Node):
     def __init__(self, token: Token, value: ValueNode) -> None:
         self.token = token
         self.value = value
-        
-class FnCallNode(Node):
-    def __init__(self, name: str) -> None:
-        self.name = name
     
 class DeclarationNode(Node):
     def __init__(self, parent: any, datatype: TypeNode, cell: CellNode = None, alias: str = None, value: ValueNode = None) -> None:
@@ -566,6 +561,24 @@ class ReassignNode(Node):
         self.cell = cell
         self.alias = alias
         self.value = value
+
+class ParamNode(Node):
+    def __init__(self, parent: any, alias: str) -> None:
+        self.parent = parent
+        self.alias = alias
+        
+class FnNode(Node):
+    def __init__(self, parent: any, name: str, params: List[ParamNode], body: List[any]) -> None:
+        self.parent = parent
+        self.name = name
+        self.params = params
+        self.body = body
+
+class FnCallNode(Node):
+    def __init__(self, name: str, fn: List[any], params: List[ParamNode]) -> None:
+        self.name = name
+        self.fn = fn
+        self.params = params
 
 class IfNode(Node):
     def __init__(self, parent: any, body: List[any], else_node: List[any] = None, condition: ValueNode = None) -> None:
@@ -600,8 +613,11 @@ class Parser:
     def __init__(self, tokens: List[Token]):
         self.tokens = tokens
         self.index = -1
+        
         self.scope = MainNode([])
         self.pointers = {}
+        self.functions = []
+        
         self.next()
     
     def next(self, index: int = 1):
@@ -610,13 +626,17 @@ class Parser:
         return self.token
     
     def parse(self) -> Tuple[MainNode, Error]:
-        self.scope = MainNode([])
+        self.preprocess()
+        
         while self.token != None:
             if self.token.full in [(Tk.KW, 'int'), (Tk.KW, 'char'), (Tk.KW, 'bool')]:
                 self.declaration()
             
             elif self.token.full == (Tk.KW, 'if'):
                 self.if_statement()
+            
+            elif self.token.type == Tk.ID and self.token.value in map(lambda x: x.name, self.functions):
+                self.call_fn(self.token.value)
             
             elif self.token.full == (Tk.OP, '}'):
                 block_node = self.scope # Get the block node
@@ -635,6 +655,45 @@ class Parser:
                 self.next()
         
         return self.scope, None
+    
+    def preprocess(self):
+        while self.token != None:
+            if self.token.full == (Tk.KW, 'include'):
+                self.next()
+                if self.token.full == (Tk.ID, 'std'):
+                    # Standard library
+                    print_fn = FnNode(self.scope, 'print', [], [])
+                    print_fn.params.append(ParamNode(print_fn, 'output'))
+                    self.functions.append(print_fn)
+                    
+                    read_fn = FnNode(self.scope, 'read', [], [])
+                    self.functions.append(read_fn)
+                
+            self.next()
+            
+        self.index = -1
+        self.next()
+    
+    def call_fn(self, fn_name: str):
+        fn_node = None
+        for fn in self.functions:
+            if fn.name == fn_name:
+                fn_node = fn
+                break
+        
+        fn_call_node = FnCallNode(fn_name, fn_node.body, [])
+        
+        self.next()
+        
+        if self.token.full != (Tk.OP, '('): raise
+        
+        self.next()
+        
+        fn_call_node.params.append(self.expr())
+        
+        self.scope.add_child(fn_call_node)
+        
+        self.next()
     
     def declaration(self):
         decl_node = DeclarationNode(self.scope, TypeNode(self.token.value))
@@ -714,7 +773,7 @@ class Parser:
     def factor(self):
         token = self.token
         
-        if self.token.type in [Tk.INT, Tk.FLOAT, Tk.CHAR]:
+        if self.token.type in [Tk.INT, Tk.FLOAT, Tk.CHAR, Tk.STR]:
             self.next()
             return ValueNode(token.type, token.value)
         
