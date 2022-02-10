@@ -761,8 +761,6 @@ class Parser:
             self.next()
         else:
             decl_node.cell = CellNode((list(self.pointers.values())[-1] + 2) if list(self.pointers.values()) else 0)
-            
-        print(self.token)
         
         if self.token.type != Tk.ID: raise
 
@@ -863,7 +861,25 @@ class Parser:
             value = UnaryOpNode(op_token, value)
         
         return value
-        
+
+
+
+###################################################
+# COMPILER
+###################################################
+
+class Compiler:
+    def __init__(self):
+        self.pointer = 0
+    
+    def __init__(self, node):
+        pass
+
+
+
+###################################################
+# RUN
+###################################################
 
 def run(file_name: str, text: str) -> None:
     lexer = Lexer(file_name, text)
