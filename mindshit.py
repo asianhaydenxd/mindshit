@@ -87,9 +87,6 @@ Delete identifier
 
 
 # Imports
-from ast import Param
-from codeop import CommandCompiler
-from platform import node
 from typing import TypeVar, Union, List, Tuple
 import json
 
@@ -102,9 +99,32 @@ LETTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZŠŒŽšœžŸÀ�
 WHITESPACE = ' \t\n'
 
 
+# Position
+class Position:
+    def __init__(self, index: int, line: int, column: int, file_name: str, file_text: str) -> None:
+        self.index = index
+        self.line = line
+        self.column = column
+        self.file_name = file_name
+        self.file_text = file_text
+        
+    def next(self, char: str = None) -> Self:
+        self.index += 1
+        self.column += 1
+        
+        if char == '\n':
+            self.line += 1
+            self.column = 0
+        
+        return self
+    
+    def copy(self) -> Self:
+        return Position(self.index, self.line, self.column, self.file_name, self.file_text)
+
+
 # Error
 class Error:
-    def __init__(self, name, info, start, end=None):
+    def __init__(self, name: str, info: str, start: Position, end: Position = None):
         self.name = name
         self.info = info
         self.start = start
@@ -112,13 +132,13 @@ class Error:
         if not end:
             self.end = start.copy().next()
     
-    def __str__(self):
+    def __str__(self) -> str:
         result = f'{self.name}: {self.info}\n'
         result += f'File "{self.start.file_name}", line {self.start.line + 1}\n'
         result += self.point()
         return result
 
-    def point(self):
+    def point(self) -> str:
         result = ''
 
         # Calculate indices
@@ -151,12 +171,12 @@ class Error:
     
 
 class IllegalCharError(Error):
-    def __init__(self, info, start, end=None):
+    def __init__(self, info: str, start: Position, end: Position = None) -> None:
         super().__init__('Illegal Character', info, start, end)
     
 
 class InvalidSyntaxError(Error):
-    def __init__(self, info, start, end=None):
+    def __init__(self, info: str, start: Position, end: Position = None) -> None:
         super().__init__('Invalid Syntax', info, start, end)
 
 
@@ -164,29 +184,6 @@ class InvalidSyntaxError(Error):
 ###################################################
 # LEXER
 ###################################################
-
-# Position
-class Position:
-    def __init__(self, index: int, line: int, column: int, file_name: str, file_text: str) -> None:
-        self.index = index
-        self.line = line
-        self.column = column
-        self.file_name = file_name
-        self.file_text = file_text
-        
-    def next(self, char: str = None) -> Self:
-        self.index += 1
-        self.column += 1
-        
-        if char == '\n':
-            self.line += 1
-            self.column = 0
-        
-        return self
-    
-    def copy(self) -> Self:
-        return Position(self.index, self.line, self.column, self.file_name, self.file_text)
-
 
 # Tokens
 class Tk:
@@ -276,7 +273,7 @@ class Lexer:
         self.char = None
         self.next()
     
-    def next(self, count=1) -> Self:
+    def next(self, count: int = 1) -> Self:
         for _ in range(count):
             self.pos.next(self.char)
         
@@ -440,7 +437,7 @@ class Lexer:
         
         return chars
     
-    def make_number(self) -> Token:
+    def make_number(self) -> Tuple[Token, Error]:
         num_str = ''
         dot_count = 0
         start_pos = self.pos.copy()
@@ -461,7 +458,7 @@ class Lexer:
         else:
             return Token(Tk.FLOAT, float(num_str), start_pos, self.pos)
     
-    def make_text(self) -> Token:
+    def make_text(self) -> Tuple[Token, Error]:
         text_str = ''
         start_pos = self.pos.copy()
         
@@ -473,7 +470,7 @@ class Lexer:
         
         return Token(token_type, text_str, start_pos, self.pos)
 
-    def make_char(self) -> Token:
+    def make_char(self) -> Tuple[Token, Error]:
         self.next()
         
         token = Token(Tk.CHAR, self.char, self.pos)
@@ -487,7 +484,7 @@ class Lexer:
         
         return token, None
     
-    def make_string(self) -> Token:
+    def make_string(self) -> Tuple[Token, Error]:
         text_str = ''
         start_pos = self.pos.copy()
         
@@ -501,7 +498,7 @@ class Lexer:
         
         return Token(Tk.STR, text_str, start_pos, self.pos), None
     
-    def make_long_assign(self, value: str) -> Token:
+    def make_long_assign(self, value: str) -> Tuple[Token, Error]:
         self.next()
         
         while self.char != None and self.char == '=':
@@ -531,7 +528,7 @@ class Node:
         return str(vars(self))
 
 class CellNode(Node):
-    def __init__(self, address) -> None:
+    def __init__(self, address: int) -> None:
         self.address = address
 
 class TypeNode(Node):
@@ -626,7 +623,7 @@ class MainNode(Node):
 
 
 class Parser:
-    def __init__(self, tokens: List[Token]):
+    def __init__(self, tokens: List[Token]) -> None:
         self.tokens = tokens
         self.index = -1
         
@@ -637,7 +634,7 @@ class Parser:
         
         self.next()
     
-    def next(self, index: int = 1):
+    def next(self, index: int = 1) -> Token:
         self.index += index
         self.token = self.tokens[self.index] if self.index < len(self.tokens) else None
         return self.token
@@ -682,15 +679,15 @@ class Parser:
         
         return self.scope, None
     
-    def rise_scope_address(self):
+    def rise_scope_address(self) -> None:
         self.scope_address.pop()
         self.scope = self.scope_address[-1]
     
-    def lower_scope_address(self, node):
+    def lower_scope_address(self, node: any) -> None:
         self.scope_address.append(node)
         self.scope = node
     
-    def preprocess(self):
+    def preprocess(self) -> None:
         while self.token != None:
             if self.token.full == (Tk.KW, 'include'):
                 self.next()
@@ -719,7 +716,7 @@ class Parser:
         self.index = -1
         self.next()
     
-    def call_fn(self, fn_name: str):
+    def call_fn(self, fn_name: str) -> None:
         fn_node = None
         for fn in self.functions:
             if fn.name == fn_name:
@@ -743,7 +740,7 @@ class Parser:
         
         self.next()
     
-    def declaration(self):
+    def declaration(self) -> None:
         decl_node = DeclarationNode(TypeNode(self.token.value))
         self.scope.add_child(decl_node)
         
@@ -784,7 +781,7 @@ class Parser:
         decl_node.value = self.expr()
         self.pointers[decl_node.alias] = decl_node.cell.address
         
-    def if_statement(self):
+    def if_statement(self) -> None:
         if_node = IfNode([])
         self.scope.add_child(if_node)
         
@@ -800,7 +797,7 @@ class Parser:
 
         self.next()
 
-    def else_statement(self):
+    def else_statement(self) -> None:
         if type(self.scope) != IfNode: raise
         
         else_node = ElseNode([])
@@ -815,7 +812,7 @@ class Parser:
         
     # Algebra parser
         
-    def factor(self):
+    def factor(self) -> any:
         token = self.token
         
         if self.token.type in [Tk.INT, Tk.FLOAT, Tk.CHAR, Tk.STR]:
@@ -837,22 +834,22 @@ class Parser:
                 self.next()
                 return expr
         
-    def term(self):
+    def term(self) -> BinaryOpNode:
         return self.binary_op(self.factor, ((Tk.OP, '*'), (Tk.OP, '/'), (Tk.OP, '%')))
     
-    def arith_expr(self):
+    def arith_expr(self) -> BinaryOpNode:
         return self.binary_op(self.term, ((Tk.OP, '+'), (Tk.OP, '-')))
     
-    def comp_expr(self):
+    def comp_expr(self) -> BinaryOpNode:
         return self.binary_op(self.arith_expr, ((Tk.OP, '='), (Tk.OP, '>'), (Tk.OP, '<'), (Tk.OP, '>='), (Tk.OP, '<='), (Tk.OP, '!=')))
     
-    def not_expr(self):
+    def not_expr(self) -> UnaryOpNode:
         return self.unary_op(self.comp_expr, [(Tk.KW, 'not')])
     
-    def expr(self):
+    def expr(self) -> BinaryOpNode:
         return self.binary_op(self.not_expr, ((Tk.KW, 'and'), (Tk.KW, 'or')))
     
-    def binary_op(self, function, ops):
+    def binary_op(self, function: function, ops: List[Tuple[str]]) -> BinaryOpNode:
         left = function()
         
         while self.token.full in ops:
@@ -863,7 +860,7 @@ class Parser:
             
         return left
     
-    def unary_op(self, function, ops):
+    def unary_op(self, function: function, ops: List[Tuple[str]]) -> UnaryOpNode:
         value = function()
         while self.token.full in ops:
             op_token = self.token
@@ -882,7 +879,7 @@ class Compiler:
     def __init__(self):
         self.pointer = 0
     
-    def __init__(self, node):
+    def __init__(self, mainnode: MainNode) -> None:
         pass
 
 
@@ -916,7 +913,7 @@ def run(file_name: str, text: str) -> None:
         return ast, None
 
 
-def main():
+def main() -> None:
     with open("main.ms") as f:
         result, error = run("main.ms", f.read())
 
