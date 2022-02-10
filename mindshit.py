@@ -87,7 +87,7 @@ Delete identifier
 
 
 # Imports
-from typing import TypeVar, Union, List, Tuple
+from typing import Callable, TypeVar, Union, List, Tuple
 import json
 
 Self = TypeVar('Self')
@@ -849,7 +849,7 @@ class Parser:
     def expr(self) -> BinaryOpNode:
         return self.binary_op(self.not_expr, ((Tk.KW, 'and'), (Tk.KW, 'or')))
     
-    def binary_op(self, function: function, ops: List[Tuple[str]]) -> BinaryOpNode:
+    def binary_op(self, function: Callable, ops: List[Tuple[str]]) -> BinaryOpNode:
         left = function()
         
         while self.token.full in ops:
@@ -860,7 +860,7 @@ class Parser:
             
         return left
     
-    def unary_op(self, function: function, ops: List[Tuple[str]]) -> UnaryOpNode:
+    def unary_op(self, function: Callable, ops: List[Tuple[str]]) -> UnaryOpNode:
         value = function()
         while self.token.full in ops:
             op_token = self.token
@@ -875,12 +875,32 @@ class Parser:
 # COMPILER
 ###################################################
 
-class Compiler:
-    def __init__(self):
-        self.pointer = 0
-    
+class Compiler: # Go through AST and return string in Brainfuck
     def __init__(self, mainnode: MainNode) -> None:
-        pass
+        self.mainnode = mainnode
+        
+    def compile(self) -> None:
+        self.result = ''
+        self.pointer = 0
+        return self.visit(self.mainnode)
+    
+    def visit(self, node: any) -> str:
+        for child in node.body:
+            if type(child) == InstructionNode:
+                self.visit_instruction(child)
+                
+            elif type(child) == DeclarationNode:
+                self.visit_declaration(child)
+    
+    def visit_instruction(self, node: InstructionNode) -> str:
+        pointer = self.pointer
+        if node.command == 'move':
+            self.pointer = node.argument
+            if node.argument > self.pointer:
+                return '>' * int(node.argument) - pointer
+            else:
+                
+                return '<' * pointer - int(node.argument)
 
 
 
@@ -909,8 +929,14 @@ def run(file_name: str, text: str) -> None:
     
     if parse_error:
         return None, parse_error
-    elif ast: # Remove this elif once compiler is implemented
-        return ast, None
+    
+    compiler = Compiler(ast)
+    bf, compiler_error = compiler.compile()
+    
+    if compiler_error:
+        return None, compiler_error
+    
+    return bf
 
 
 def main() -> None:

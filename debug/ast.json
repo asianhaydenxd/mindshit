@@ -1,80 +1,8 @@
 {
     "body": [
         {
-            "datatype": {
-                "type": "int",
-                "length": 1
-            },
-            "cell": {
-                "address": 0
-            },
-            "alias": "i",
-            "value": {
-                "type": "int",
-                "value": 10
-            }
-        },
-        {
-            "condition": {
-                "left": {
-                    "address": 0
-                },
-                "token": {
-                    "op": "="
-                },
-                "right": {
-                    "type": "int",
-                    "value": 20
-                }
-            },
-            "body": [
-                {
-                    "name": "print",
-                    "fn": [
-                        {
-                            "command": "move",
-                            "argument": {
-                                "param_num": 0
-                            }
-                        },
-                        {
-                            "command": "output",
-                            "argument": null
-                        }
-                    ],
-                    "params": [
-                        {
-                            "type": "int",
-                            "value": 1
-                        }
-                    ]
-                }
-            ],
-            "else_node": {
-                "body": [
-                    {
-                        "name": "print",
-                        "fn": [
-                            {
-                                "command": "move",
-                                "argument": {
-                                    "param_num": 0
-                                }
-                            },
-                            {
-                                "command": "output",
-                                "argument": null
-                            }
-                        ],
-                        "params": [
-                            {
-                                "type": "int",
-                                "value": 2
-                            }
-                        ]
-                    }
-                ]
-            }
+            "command": "move",
+            "argument": 1
         }
     ]
 }
