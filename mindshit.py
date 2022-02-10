@@ -696,12 +696,22 @@ class Parser:
                 self.next()
                 if self.token.full == (Tk.ID, 'std'):
                     # Standard library
-                    print_fn = FnNode('print')
-                    print_fn.params = [ParamNode('output')]
-                    print_fn.body = [InstructionNode('move', ParamCallNode(0)), InstructionNode('output')]
+                    print_fn = FnNode('print', 
+                        [ParamNode('output')], 
+                        [
+                            InstructionNode('move', ParamCallNode(0)), 
+                            InstructionNode('output')
+                        ]
+                    )
                     self.functions.append(print_fn)
                     
-                    read_fn = FnNode('read', [], [])
+                    read_fn = FnNode('read', 
+                        [], 
+                        [
+                            InstructionNode('move', ParamCallNode(0)), 
+                            InstructionNode('input')
+                        ]
+                    )
                     self.functions.append(read_fn)
                 
             self.next()
