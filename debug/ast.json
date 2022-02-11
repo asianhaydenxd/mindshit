@@ -1,38 +1,27 @@
 {
     "body": [
         {
-            "datatype": {
-                "type": "int",
-                "length": 1
-            },
-            "cell": {
-                "address": 0
-            },
-            "alias": "i",
-            "value": {
-                "type": "int",
-                "value": 3
-            }
-        },
-        {
-            "datatype": {
-                "type": "int",
-                "length": 1
-            },
-            "cell": {
-                "address": 20
-            },
-            "alias": "twenty",
-            "value": {
-                "type": "int",
-                "value": 20
-            }
-        },
-        {
-            "command": "output",
+            "command": "set",
             "argument": {
-                "address": 0
+                "type": "int",
+                "value": 5
             }
+        },
+        {
+            "name": "print",
+            "fn": [
+                {
+                    "command": "output",
+                    "argument": {
+                        "param_num": 0
+                    }
+                }
+            ],
+            "params": [
+                {
+                    "address": 0
+                }
+            ]
         }
     ]
 }

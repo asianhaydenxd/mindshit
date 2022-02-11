@@ -650,7 +650,6 @@ class Parser:
                 instruction = InstructionNode(self.token.value)
                 self.next()
                 instruction.argument = self.expr()
-                self.next()
                  
                 self.scope.add_child(instruction)
             
@@ -690,7 +689,7 @@ class Parser:
         while self.token != None:
             if self.token.full == (Tk.KW, 'include'):
                 self.next()
-                if self.token.full == (Tk.ID, 'std'):
+                if self.token.full == (Tk.ID, 'io'):
                     # Standard library
                     print_fn = FnNode('print', 
                         [ParamNode('output')], 
@@ -938,29 +937,29 @@ class Compiler: # Go through AST and return string in Brainfuck
             return '>' * (cell_target.address - pointer)
         return '<' * (pointer - cell_target.address)
     
-    def set(self, value_target: CellNode) -> str:
+    def set(self, value_target: ValueNode) -> str:
         cell = self.cells[self.pointer]
         self.cells[self.pointer] = value_target
             
-        if value_target.address > cell:
-            return '+' * (value_target.address - cell)
-        return '-' * (cell - value_target.address)
+        if value_target.value > cell:
+            return '+' * (value_target.value - cell)
+        return '-' * (cell - value_target.value)
 
-    def right(self, cell_increase: int) -> str:
-        self.pointer += cell_increase if cell_increase != None else 1
-        return '>' * cell_increase
+    def right(self, cell_increase: ValueNode) -> str:
+        self.pointer += cell_increase.value if cell_increase.value != None else 1
+        return '>' * cell_increase.value
 
-    def left(self, cell_decrease: int) -> str:
-        self.pointer -= cell_decrease if cell_decrease != None else 1
-        return '<' * cell_decrease
+    def left(self, cell_decrease: ValueNode) -> str:
+        self.pointer -= cell_decrease.value if cell_decrease.value != None else 1
+        return '<' * cell_decrease.value
 
-    def add(self, value_increase: int) -> str:
-        self.cells[self.pointer] += value_increase if value_increase != None else 1
-        return '+' * value_increase
+    def add(self, value_increase: ValueNode) -> str:
+        self.cells[self.pointer] += value_increase.value if value_increase.value != None else 1
+        return '+' * value_increase.value
 
-    def sub(self, value_decrease: int) -> str:
-        self.cells[self.pointer] -= value_decrease if value_decrease != None else 1
-        return '-' * value_decrease
+    def sub(self, value_decrease: ValueNode) -> str:
+        self.cells[self.pointer] -= value_decrease.value if value_decrease.value != None else 1
+        return '-' * value_decrease.value
 
     def output(self, output_cell: CellNode = None) -> str:
         return self.move_append(output_cell, '.')
