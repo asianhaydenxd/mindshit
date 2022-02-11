@@ -577,7 +577,7 @@ class ParamCallNode(Node):
         self.param_num = param_num
 
 class InstructionNode(Node):
-    def __init__(self, command: str, argument: Union[int, ParamCallNode] = None) -> None:
+    def __init__(self, command: str, argument: Union[CellNode, int] = None) -> None:
         self.command = command
         self.argument = argument
         if argument == None and command in ['right', 'left', 'add', 'sub']:
@@ -649,9 +649,8 @@ class Parser:
             elif self.token.full in [(Tk.KW, 'move'), (Tk.KW, 'right'), (Tk.KW, 'left'), (Tk.KW, 'set'), (Tk.KW, 'add'), (Tk.KW, 'sub'), (Tk.KW, 'output'), (Tk.KW, 'input')]:
                 instruction = InstructionNode(self.token.value)
                 self.next()
-                if self.token.type == 'int':
-                    instruction.argument = int(self.token.value)
-                    self.next() 
+                instruction.argument = self.expr()
+                self.next()
                  
                 self.scope.add_child(instruction)
             
@@ -696,8 +695,7 @@ class Parser:
                     print_fn = FnNode('print', 
                         [ParamNode('output')], 
                         [
-                            InstructionNode('move', ParamCallNode(0)), 
-                            InstructionNode('output')
+                            InstructionNode('output', ParamCallNode(0))
                         ]
                     )
                     self.functions.append(print_fn)
@@ -826,6 +824,12 @@ class Parser:
         elif self.token.type == Tk.ID and self.token.value in self.pointers:
             self.next()
             return CellNode(self.pointers[token.value])
+
+        elif self.token.full == (Tk.OP, '@'):
+            self.next()
+            token = self.token
+            self.next()
+            return CellNode(token.value)
         
         elif self.token.full == (Tk.OP, '('):
             self.next()
@@ -882,25 +886,98 @@ class Compiler: # Go through AST and return string in Brainfuck
     def compile(self) -> None:
         self.result = ''
         self.pointer = 0
-        return self.visit(self.mainnode)
+        self.cells = [0 for _ in range(30000)]
+        self.visit(self.mainnode)
+        return self.result, None
     
     def visit(self, node: any) -> str:
         for child in node.body:
             if type(child) == InstructionNode:
-                self.visit_instruction(child)
+                self.result += self.visit_instruction(child)
                 
             elif type(child) == DeclarationNode:
-                self.visit_declaration(child)
+                self.result += self.visit_declaration(child)
     
     def visit_instruction(self, node: InstructionNode) -> str:
-        pointer = self.pointer
         if node.command == 'move':
-            self.pointer = node.argument
-            if node.argument > self.pointer:
-                return '>' * int(node.argument) - pointer
-            else:
-                
-                return '<' * pointer - int(node.argument)
+            return self.move(node.argument)
+        
+        elif node.command == 'set':
+            return self.set(node.argument)
+
+        elif node.command == 'right':
+            return self.right(node.argument)
+
+        elif node.command == 'left':
+            return self.left(node.argument)
+
+        elif node.command == 'add':
+            return self.add(node.argument)
+
+        elif node.command == 'sub':
+            return self.sub(node.argument)
+
+        elif node.command == 'output':
+            return self.output(node.argument)
+        
+        elif node.command == 'input':
+            return self.input(node.argument)
+
+        return ''
+
+    def visit_declaration(self, node: DeclarationNode):
+        return self.move(node.cell) + self.set(node.value.value)
+
+    # Instructions
+    
+    def move(self, cell_target: CellNode) -> str:
+        pointer = self.pointer
+        self.pointer = cell_target.address
+        
+        if cell_target.address > pointer:
+            return '>' * (cell_target.address - pointer)
+        return '<' * (pointer - cell_target.address)
+    
+    def set(self, value_target: CellNode) -> str:
+        cell = self.cells[self.pointer]
+        self.cells[self.pointer] = value_target
+            
+        if value_target.address > cell:
+            return '+' * (value_target.address - cell)
+        return '-' * (cell - value_target.address)
+
+    def right(self, cell_increase: int) -> str:
+        self.pointer += cell_increase if cell_increase != None else 1
+        return '>' * cell_increase
+
+    def left(self, cell_decrease: int) -> str:
+        self.pointer -= cell_decrease if cell_decrease != None else 1
+        return '<' * cell_decrease
+
+    def add(self, value_increase: int) -> str:
+        self.cells[self.pointer] += value_increase if value_increase != None else 1
+        return '+' * value_increase
+
+    def sub(self, value_decrease: int) -> str:
+        self.cells[self.pointer] -= value_decrease if value_decrease != None else 1
+        return '-' * value_decrease
+
+    def output(self, output_cell: CellNode = None) -> str:
+        return self.move_append(output_cell, '.')
+
+    def input(self, input_cell: CellNode = None) -> str:
+        return self.move_append(input_cell, ',')
+
+    def move_append(self, cell: CellNode, symbol: str) -> str:
+        if cell != None:
+            pointer = self.pointer
+            self.pointer = cell
+        
+            if cell.address > pointer:
+                return '>' * (cell.address - pointer) + symbol
+            if cell.address < pointer:
+                return '<' * (pointer - cell.address) + symbol
+        return symbol
 
 
 
@@ -915,6 +992,7 @@ def run(file_name: str, text: str) -> None:
     if error:
         return None, error
     
+    # Load tokens to tokens.json
     token_json = json.loads(str(list(map(lambda x: x.__str__(), tokens))))
     with open('debug/tokens.json', 'w') as token_json_file:
         json.dump(token_json, token_json_file, indent=4)
@@ -932,11 +1010,15 @@ def run(file_name: str, text: str) -> None:
     
     compiler = Compiler(ast)
     bf, compiler_error = compiler.compile()
+
+    # Load brainfuck output into target.bf
+    with open('debug/target.bf', 'w') as target_bf_file:
+        target_bf_file.write(bf)
     
     if compiler_error:
         return None, compiler_error
     
-    return bf
+    return bf, None
 
 
 def main() -> None:

@@ -1,8 +1,38 @@
 {
     "body": [
         {
-            "command": "move",
-            "argument": 1
+            "datatype": {
+                "type": "int",
+                "length": 1
+            },
+            "cell": {
+                "address": 0
+            },
+            "alias": "i",
+            "value": {
+                "type": "int",
+                "value": 3
+            }
+        },
+        {
+            "datatype": {
+                "type": "int",
+                "length": 1
+            },
+            "cell": {
+                "address": 20
+            },
+            "alias": "twenty",
+            "value": {
+                "type": "int",
+                "value": 20
+            }
+        },
+        {
+            "command": "output",
+            "argument": {
+                "address": 0
+            }
         }
     ]
 }
