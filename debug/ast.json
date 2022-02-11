@@ -1,27 +1,21 @@
 {
     "body": [
         {
-            "command": "set",
-            "argument": {
+            "datatype": {
                 "type": "int",
-                "value": 5
-            }
-        },
-        {
-            "name": "print",
-            "fn": [
-                {
-                    "command": "output",
-                    "argument": {
-                        "param_num": 0
-                    }
-                }
-            ],
-            "params": [
-                {
+                "length": 1
+            },
+            "cell": {
+                "address": 0
+            },
+            "alias": "i",
+            "value": {
+                "type": "int",
+                "value": 1,
+                "address": {
                     "address": 0
                 }
-            ]
+            }
         }
     ]
 }
