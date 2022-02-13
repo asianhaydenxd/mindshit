@@ -10,11 +10,28 @@
             },
             "alias": "i",
             "value": {
+                "type": "bool",
+                "value": "true"
+            }
+        },
+        {
+            "datatype": {
                 "type": "int",
-                "value": 1,
-                "address": {
-                    "address": 0
-                }
+                "length": 1
+            },
+            "cell": {
+                "address": 20
+            },
+            "alias": "twenty",
+            "value": {
+                "type": "int",
+                "value": 20
+            }
+        },
+        {
+            "command": "output",
+            "argument": {
+                "address": 0
             }
         }
     ]

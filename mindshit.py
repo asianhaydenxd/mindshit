@@ -97,7 +97,7 @@ Self = TypeVar('Self')
 DIGITS = '0123456789'
 LETTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZŠŒŽšœžŸÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþ'
 WHITESPACE = ' \t\n'
-CELLS = 10
+CELLS = 25
 
 
 # Position
@@ -528,6 +528,10 @@ class Node:
     def __repr__(self) -> str:
         return str(vars(self))
 
+class CellNode(Node):
+    def __init__(self, address: int) -> None:
+        self.address = address
+
 class TypeNode(Node):
     def __init__(self, type: str, length: int = 1, datatype: Self = None) -> None:
         self.type = type
@@ -536,28 +540,21 @@ class TypeNode(Node):
         if type == 'array':
             self.datatype = datatype
 
-class CellNode(Node):
-    def __init__(self, address: int) -> None:
-        self.address = address
-
 class ValueNode(Node):
-    def __init__(self, type: TypeNode, value: Union[int, List[Self]], address: int) -> None:
+    def __init__(self, type: TypeNode, value: Union[int, List[Self]]) -> None:
         self.type = type
         self.value = value
-        self.address = address
 
 class BinaryOpNode(Node):
-    def __init__(self, left: ValueNode, token: Token, right: ValueNode, address: int) -> None:
+    def __init__(self, left: ValueNode, token: Token, right: ValueNode) -> None:
         self.left = left
         self.token = token
         self.right = right
-        self.address = address
         
 class UnaryOpNode(Node):
-    def __init__(self, token: Token, value: ValueNode, address: int) -> None:
+    def __init__(self, token: Token, value: ValueNode) -> None:
         self.token = token
         self.value = value
-        self.address = address
     
 class DeclarationNode(Node):
     def __init__(self, datatype: TypeNode, cell: CellNode = None, alias: str = None, value: ValueNode = None) -> None:
@@ -634,7 +631,6 @@ class Parser:
         self.scope = MainNode([])
         self.scope_address = [self.scope]
         self.pointers = {}
-        self.ram = []
         self.functions = []
         
         self.next()
@@ -689,19 +685,6 @@ class Parser:
     def lower_scope_address(self, node: any) -> None:
         self.scope_address.append(node)
         self.scope = node
-    
-    def get_last_available_cell(self) -> CellNode:
-        if self.pointers or self.ram:
-            target_address = max(list(self.pointers.values()) + self.ram) + 2
-        else:
-            target_address = 0
-        
-        return CellNode(target_address)
-
-    def add_to_ram(self) -> None:
-        cell = self.get_last_available_cell()
-        self.ram.append(cell.address)
-        return cell
     
     def preprocess(self) -> None:
         while self.token != None:
@@ -782,7 +765,7 @@ class Parser:
             
             self.next()
         else:
-            decl_node.cell = self.get_last_available_cell()
+            decl_node.cell = CellNode((list(self.pointers.values())[-1] + 2) if list(self.pointers.values()) else 0)
         
         if self.token.type != Tk.ID: raise
 
@@ -832,11 +815,11 @@ class Parser:
         
         if self.token.type in [Tk.INT, Tk.FLOAT, Tk.CHAR, Tk.STR]:
             self.next()
-            return ValueNode(token.type, token.value, self.add_to_ram())
+            return ValueNode(token.type, token.value)
         
         elif self.token.full in [(Tk.KW, 'true'), (Tk.KW, 'false')]:
             self.next()
-            return ValueNode('bool', token.value, self.add_to_ram())
+            return ValueNode('bool', token.value)
         
         elif self.token.type == Tk.ID and self.token.value in self.pointers:
             self.next()
@@ -877,7 +860,7 @@ class Parser:
             op_token = self.token
             self.next()
             right = function()
-            left = BinaryOpNode(left, op_token, right, self.add_to_ram())
+            left = BinaryOpNode(left, op_token, right)
             
         return left
     
@@ -886,7 +869,7 @@ class Parser:
         while self.token.full in ops:
             op_token = self.token
             self.next()
-            value = UnaryOpNode(op_token, value, self.add_to_ram())
+            value = UnaryOpNode(op_token, value)
         
         return value
 
@@ -905,6 +888,7 @@ class Compiler: # Go through AST and return string in Brainfuck
         self.pointer = 0
         self.cells = [0 for _ in range(CELLS)]
         self.visit(self.mainnode)
+        print(self.cells)
         return self.result, None
     
     def visit(self, node: any) -> str:
@@ -914,41 +898,56 @@ class Compiler: # Go through AST and return string in Brainfuck
                 
             elif type(child) == DeclarationNode:
                 self.result += self.visit_declaration(child)
-        print(self.cells)
     
     def visit_instruction(self, node: InstructionNode) -> str:
         if node.command == 'move':
-            return self.cmd_move(node.argument)
+            return self.move(node.argument)
         
         elif node.command == 'set':
-            return self.cmd_set(node.argument)
+            return self.set(node.argument)
 
         elif node.command == 'right':
-            return self.cmd_right(node.argument)
+            return self.right(node.argument)
 
         elif node.command == 'left':
-            return self.cmd_left(node.argument)
+            return self.left(node.argument)
 
         elif node.command == 'add':
-            return self.cmd_add(node.argument)
+            return self.add(node.argument)
 
         elif node.command == 'sub':
-            return self.cmd_sub(node.argument)
+            return self.sub(node.argument)
 
         elif node.command == 'output':
-            return self.cmd_output(node.argument)
+            return self.output(node.argument)
         
         elif node.command == 'input':
-            return self.cmd_input(node.argument)
+            return self.input(node.argument)
 
         return ''
 
     def visit_declaration(self, node: DeclarationNode):
-        return self.cmd_move(node.cell) + self.cmd_set(node.value)
+        return self.move(node.cell) + self.set(node.value)
+    
+    # Turn other value types into integers from 0-255
+
+    def correct(self, cell: ValueNode):
+        new_value = 0
+        if cell.type == 'int':
+            new_value = cell.value
+        elif cell.type == 'bool':
+            if cell.value == 'true': new_value = 1
+        elif cell.type == 'char':
+            new_value = ord(cell.value)
+        elif cell.type == 'array':
+            return [self.correct(i) for i in cell.value]
+        
+        if new_value < 0 or new_value > 255: raise
+        return new_value
 
     # Instructions
     
-    def cmd_move(self, cell_target: CellNode) -> str:
+    def move(self, cell_target: CellNode) -> str:
         pointer = self.pointer
         self.pointer = cell_target.address
         
@@ -956,34 +955,39 @@ class Compiler: # Go through AST and return string in Brainfuck
             return '>' * (cell_target.address - pointer)
         return '<' * (pointer - cell_target.address)
     
-    def cmd_set(self, value_target: ValueNode) -> str:
+    def set(self, value_target: ValueNode) -> str:
+        new_value = self.correct(value_target)
         cell = self.cells[self.pointer]
-        self.cells[self.pointer] = value_target
-            
-        if value_target.value > cell:
-            return '+' * (value_target.value - cell)
-        return '-' * (cell - value_target.value)
+        self.cells[self.pointer] = new_value
+        
+        if new_value > cell:
+            return '+' * (new_value - cell)
+        return '-' * (cell - new_value)
 
-    def cmd_right(self, cell_increase: ValueNode) -> str:
-        self.pointer += cell_increase.value if cell_increase.value != None else 1
-        return '>' * cell_increase.value
+    def right(self, cell_increase: ValueNode) -> str:
+        new_value = self.correct(cell_increase)
+        self.pointer += new_value if new_value != None else 1
+        return '>' * new_value
 
-    def cmd_left(self, cell_decrease: ValueNode) -> str:
-        self.pointer -= cell_decrease.value if cell_decrease.value != None else 1
-        return '<' * cell_decrease.value
+    def left(self, cell_decrease: ValueNode) -> str:
+        new_value = self.correct(cell_decrease)
+        self.pointer -= new_value if new_value != None else 1
+        return '<' * new_value
 
-    def cmd_add(self, value_increase: ValueNode) -> str:
-        self.cells[self.pointer] += value_increase.value if value_increase.value != None else 1
-        return '+' * value_increase.value
+    def add(self, value_increase: ValueNode) -> str:
+        new_value = self.correct(value_increase)
+        self.cells[self.pointer] += new_value if new_value != None else 1
+        return '+' * new_value
 
-    def cmd_sub(self, value_decrease: ValueNode) -> str:
-        self.cells[self.pointer] -= value_decrease.value if value_decrease.value != None else 1
-        return '-' * value_decrease.value
+    def sub(self, value_decrease: ValueNode) -> str:
+        new_value = self.correct(value_decrease)
+        self.cells[self.pointer] -= new_value if new_value != None else 1
+        return '-' * new_value
 
-    def cmd_output(self, output_cell: CellNode = None) -> str:
+    def output(self, output_cell: CellNode = None) -> str:
         return self.move_append(output_cell, '.')
 
-    def cmd_input(self, input_cell: CellNode = None) -> str:
+    def input(self, input_cell: CellNode = None) -> str:
         return self.move_append(input_cell, ',')
 
     def move_append(self, cell: CellNode, symbol: str) -> str:
