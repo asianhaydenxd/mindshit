@@ -1,4 +1,6 @@
-int @0 i := true
+include io
+
+int @0 i := 2
 int @20 twenty := 20
 
-output(@0)
+print(i)

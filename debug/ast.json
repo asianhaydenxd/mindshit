@@ -10,8 +10,8 @@
             },
             "alias": "i",
             "value": {
-                "type": "bool",
-                "value": "true"
+                "type": "int",
+                "value": 2
             }
         },
         {
@@ -29,10 +29,20 @@
             }
         },
         {
-            "command": "output",
-            "argument": {
-                "address": 0
-            }
+            "name": "print",
+            "fn": [
+                {
+                    "command": "output",
+                    "argument": {
+                        "param_num": 0
+                    }
+                }
+            ],
+            "params": [
+                {
+                    "address": 0
+                }
+            ]
         }
     ]
 }

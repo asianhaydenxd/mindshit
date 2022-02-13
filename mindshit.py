@@ -703,8 +703,7 @@ class Parser:
                     read_fn = FnNode('read', 
                         [], 
                         [
-                            InstructionNode('move', ParamCallNode(0)), 
-                            InstructionNode('input')
+                            InstructionNode('input', ParamCallNode(0))
                         ]
                     )
                     self.functions.append(read_fn)
@@ -898,6 +897,9 @@ class Compiler: # Go through AST and return string in Brainfuck
                 
             elif type(child) == DeclarationNode:
                 self.result += self.visit_declaration(child)
+                
+            elif type(child) == FnCallNode:
+                self.result += self.visit_fncall(child)
     
     def visit_instruction(self, node: InstructionNode) -> str:
         if node.command == 'move':
@@ -929,6 +931,16 @@ class Compiler: # Go through AST and return string in Brainfuck
     def visit_declaration(self, node: DeclarationNode):
         return self.move(node.cell) + self.set(node.value)
     
+    def visit_fncall(self, node: FnCallNode):
+        result = ''
+        
+        for cmd in node.fn:
+            if type(cmd.argument) == ParamCallNode:
+                cmd.argument = node.params[cmd.argument.param_num]
+            result += self.visit_instruction(cmd)
+
+        return result
+        
     # Turn other value types into integers from 0-255
 
     def correct(self, cell: ValueNode):
