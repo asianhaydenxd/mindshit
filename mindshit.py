@@ -252,10 +252,12 @@ class LiteralNode:
     def __init__(self, value: int) -> None:
         self.value = value
 
-class CellNode:
+class AddressNode:
     def __init__(self, address: int) -> None:
         self.address = address
-        
+
+ValueNode = Union[LiteralNode, AddressNode]
+
 class BinaryOpNode:
     def __init__(self, left, token, right) -> None:
         self.left = left
@@ -285,47 +287,139 @@ class Parser:
            
     def parse(self) -> Tuple[MainNode, Error]:
         while self.token.full != Tk.EOF:
-            self.location[-1].body.append(self.expr())
+            expr, error = self.expr()
+            if error:
+                return None, error
+            self.location[-1].body.append(expr)
         
-        return self.location[-1]
+        return self.location[-1], None
     
-    def binary_operator(self, function: Callable, ops: List[Tuple[str]]):
-        left = function()
+    def binary_op(self, function: Callable, ops: List[Tuple[str]]):
+        left, error = function()
         if self.token.full in ops:
             op_token = self.token
             self.next()
-            right = function()
+            right, error = function()
             left = BinaryOpNode(left, op_token, right)
-        return left
+        return left, error
             
     def expr(self):
-        return self.binary_operator(self.factor, [(Tk.OP, '=')])
+        return self.binary_op(self.factor, [(Tk.OP, '=')])
             
-    def factor(self):
+    def factor(self) -> ValueNode:
         token = self.token
         self.next()
         
         if token.type == Tk.INT:
-            return LiteralNode(token.value)
+            return LiteralNode(token.value), None
+        
+        if token.type == Tk.CHAR:
+            return LiteralNode(ord(token.value)), None
 
         if token.full == (Tk.KW, 'true'):
-            return LiteralNode(1)
+            return LiteralNode(1), None
         
         if token.full == (Tk.KW, 'false'):
-            return LiteralNode(0)
+            return LiteralNode(0), None
         
         if token.full == (Tk.OP, '&'):
             address_token = self.token
             self.next()
-            return CellNode(address_token.value)
+            return AddressNode(address_token.value), None
+        
+        return None, Error('Exception Raised', 'invalid factor', token.start, token.end)
+        
+class Compiler:
+    def __init__(self, mainnode) -> None:
+        self.mainnode = mainnode
+    
+    def compile(self) -> str:
+        self.result = ''
+        self.tape = [0 for _ in range(CELLS)]
+        self.pointer = 0
+        self.visit(self.mainnode)
+        return self.result
+    
+    def visit(self, node) -> None:
+        for child in node.body:
+            if type(child) == BinaryOpNode:
+                self.result += self.visit_binary_op(child)
+    
+    def visit_binary_op(self, node: BinaryOpNode) -> str:
+        if node.token.full == (Tk.OP, '='):
+            if type(node.left) == AddressNode:
+                if type(node.right) == LiteralNode:
+                    return self.cmd_move(node.left.address) + self.cmd_set(node.right.value)
+                
+    # Instructions
+    
+    def cmd_move(self, address_target: int) -> str:
+        pointer = self.pointer
+        self.pointer = address_target
+        
+        if address_target > pointer:
+            return '>' * (address_target - pointer)
+        return '<' * (pointer - address_target)
+    
+    def cmd_set(self, value_target: int) -> str:
+        current_value = self.tape[self.pointer]
+        self.tape[self.pointer] = value_target
+        
+        if value_target > current_value:
+            return '+' * (value_target - current_value)
+        return '-' * (current_value - value_target)
 
-lexer = Lexer('<stdio>', '&0 = 1')
-tokens, error = lexer.lex()
+    def cmd_right(self, address_increment: int) -> str:
+        self.pointer += address_increment if address_increment != None else 1
+        return '>' * address_increment
+
+    def cmd_left(self, address_decrement: int) -> str:
+        self.pointer -= address_decrement if address_decrement != None else 1
+        return '<' * address_decrement
+
+    def cmd_add(self, value_increment: int) -> str:
+        self.tape[self.pointer] += value_increment if value_increment != None else 1
+        return '+' * value_increment
+
+    def cmd_sub(self, value_decrement: int) -> str:
+        self.tape[self.pointer] -= value_decrement if value_decrement != None else 1
+        return '-' * value_decrement
+
+    def cmd_output(self, output_address: int = None) -> str:
+        return self.move_append(output_address, '.')
+
+    def cmd_input(self, input_address: int = None) -> str:
+        return self.move_append(input_address, ',')
+
+    def move_append(self, address: int, symbol: str) -> str:
+        if address != None:
+            pointer = self.pointer
+            self.pointer = address
+        
+            if address > pointer:
+                return '>' * (address - pointer) + symbol
+            if address < pointer:
+                return '<' * (pointer - address) + symbol
+        return symbol
+
+def run(filename: str, filetext: str):
+    lexer = Lexer(filename, filetext)
+    tokens, error = lexer.lex()
+    if error:
+        return None, error
+    print(tokens)
+        
+    parser = Parser(tokens)
+    ast, error = parser.parse()
+    if error:
+        return None, error
+
+    compiler = Compiler(ast)
+    bf = compiler.compile()
+    print(bf)
+
+    return bf, None
+
+bf, error = run('test.ms', '&0 = 1 &1 = 2')
 if error:
     print(error)
-else:
-    print(tokens)
-    
-parser = Parser(tokens)
-ast = parser.parse()
-print(vars(ast))
