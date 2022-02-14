@@ -3,13 +3,11 @@ from typing import Callable, TypeVar, Union, List, Tuple
 
 Self = TypeVar('Self')
 
-
 # Constants
 DIGITS = '0123456789'
 LETTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZŠŒŽšœžŸÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþ'
 WHITESPACE = ' \t\n'
 CELLS = 25
-
 
 # Position
 class Position:
@@ -32,7 +30,6 @@ class Position:
     
     def copy(self) -> Self:
         return Position(self.index, self.line, self.column, self.file_name, self.file_text)
-
 
 # Error
 class Error:
@@ -91,12 +88,6 @@ class InvalidSyntaxError(Error):
     def __init__(self, info: str, start: Position, end: Position = None) -> None:
         super().__init__('Invalid Syntax', info, start, end)
 
-
-
-###################################################
-# LEXER
-###################################################
-
 # Tokens
 class Tk:
     KW = 'kw'
@@ -120,7 +111,6 @@ class Tk:
         'false',
     ]
 
-
 class Token:
     def __init__(self, type_: str, value: str = None, start: Position = None, end: Position = None) -> None:
         self.type = type_
@@ -143,11 +133,6 @@ class Token:
 
         return '{' + self.type + '}'
 
-    def matches(self, type_: str, value: any) -> str:
-        return self.type == type_ and self.value == value
-
-
-# Lexer
 class Lexer:
     def __init__(self, file_name: str, text: str) -> None:
         self.file_name = file_name
@@ -164,7 +149,7 @@ class Lexer:
         
         return self
     
-    def lex(self) -> List[Token]:
+    def lex(self) -> Tuple[List[Token], Error]:
         tokens = []
         
         while self.char != None:
@@ -173,7 +158,7 @@ class Lexer:
                 
             elif self.char in DIGITS:
                 tokens.append(self.make_number())
-
+            
             elif self.char in LETTERS:
                 tokens.append(self.make_text())
             
@@ -261,8 +246,78 @@ class Lexer:
     def skip_multiline_comment(self) -> None:
         while self.char != None and self.chars(2) != '*/':
             self.next()
-        
         self.next(2)
+
+class LiteralNode:
+    def __init__(self, value: int) -> None:
+        self.value = value
+
+class CellNode:
+    def __init__(self, address: int) -> None:
+        self.address = address
+        
+class BinaryOpNode:
+    def __init__(self, left, token, right) -> None:
+        self.left = left
+        self.token = token
+        self.right = right
+    
+    def __repr__(self) -> str:
+        return str(vars(self))
+
+class MainNode:
+    def __init__(self, body) -> None:
+        self.body = body
+
+class Parser:
+    def __init__(self, tokens: List[Token]) -> None:
+        self.tokens = tokens
+        self.index = -1
+        
+        self.location = [MainNode([])]
+        
+        self.next()
+    
+    def next(self, index: int = 1) -> Token:
+        self.index += index
+        self.token = self.tokens[self.index] if self.index < len(self.tokens) else None
+        return self.token
+           
+    def parse(self) -> Tuple[MainNode, Error]:
+        while self.token.full != Tk.EOF:
+            self.location[-1].body.append(self.expr())
+        
+        return self.location[-1]
+    
+    def binary_operator(self, function: Callable, ops: List[Tuple[str]]):
+        left = function()
+        if self.token.full in ops:
+            op_token = self.token
+            self.next()
+            right = function()
+            left = BinaryOpNode(left, op_token, right)
+        return left
+            
+    def expr(self):
+        return self.binary_operator(self.factor, [(Tk.OP, '=')])
+            
+    def factor(self):
+        token = self.token
+        self.next()
+        
+        if token.type == Tk.INT:
+            return LiteralNode(token.value)
+
+        if token.full == (Tk.KW, 'true'):
+            return LiteralNode(1)
+        
+        if token.full == (Tk.KW, 'false'):
+            return LiteralNode(0)
+        
+        if token.full == (Tk.OP, '&'):
+            address_token = self.token
+            self.next()
+            return CellNode(address_token.value)
 
 lexer = Lexer('<stdio>', '&0 = 1')
 tokens, error = lexer.lex()
@@ -270,3 +325,7 @@ if error:
     print(error)
 else:
     print(tokens)
+    
+parser = Parser(tokens)
+ast = parser.parse()
+print(vars(ast))
