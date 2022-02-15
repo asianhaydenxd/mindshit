@@ -1,4 +1,5 @@
 # Imports
+from email.headerregistry import Address
 from typing import Callable, TypeVar, Union, List, Tuple
 
 Self = TypeVar('Self')
@@ -110,6 +111,9 @@ class Tk:
         # Boolean literals
         'true',
         'false',
+        
+        # IO
+        'out',
     ]
 
 class Token:
@@ -276,6 +280,14 @@ class BinaryOpNode:
     def __repr__(self) -> str:
         return str(vars(self))
 
+class UnaryOpNode:
+    def __init__(self, token, right) -> None:
+        self.token = token
+        self.right = right
+    
+    def __repr__(self) -> str:
+        return str(vars(self))
+
 class MainNode:
     def __init__(self, body) -> None:
         self.body = body
@@ -303,7 +315,7 @@ class Parser:
         
         return self.location[-1], None
     
-    def binary_op(self, function: Callable, ops: List[Tuple[str]]):
+    def binary_op(self, ops: List[Tuple[str]], function: Callable):
         left, error = function()
         if self.token.full in ops:
             op_token = self.token
@@ -311,9 +323,23 @@ class Parser:
             right, error = function()
             left = BinaryOpNode(left, op_token, right)
         return left, error
+
+    def unary_op(self, ops: List[Tuple[str]], function: Callable):
+        if self.token.full in ops:
+            op_token = self.token
+            self.next()
+            right, error = function()
+            return UnaryOpNode(op_token, right), error
+        return function()
             
     def expr(self):
-        return self.binary_op(self.factor, [(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-=')])
+        return self.unary_op(
+            [(Tk.KW, 'out')], 
+            lambda: self.binary_op(
+                [(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-=')], 
+                self.factor
+            )
+        )
             
     def factor(self) -> ValueNode:
         token = self.token
@@ -353,16 +379,25 @@ class Compiler:
         for child in node.body:
             if type(child) == BinaryOpNode:
                 self.result += self.visit_binary_op(child)
+            if type(child) == UnaryOpNode:
+                self.result += self.visit_unary_op(child)
     
     def visit_binary_op(self, node: BinaryOpNode) -> str:
         if type(node.left) == AddressNode:
             if type(node.right) == LiteralNode:
                 if node.token.full == (Tk.OP, '='):
                     return self.cmd_move(node.left.address) + self.cmd_set(node.right.value)
+                
                 if node.token.full == (Tk.OP, '+='):
                     return self.cmd_move(node.left.address) + self.cmd_add(node.right.value)
+                
                 if node.token.full == (Tk.OP, '-='):
                     return self.cmd_move(node.left.address) + self.cmd_sub(node.right.value)
+                
+    def visit_unary_op(self, node: UnaryOpNode) -> str:
+        if type(node.right) == AddressNode:
+            if node.token.full == (Tk.KW, 'out'):
+                return self.cmd_output(node.right.address)
                 
     # Instructions
     
@@ -433,6 +468,6 @@ def run(filename: str, filetext: str):
 
     return bf, None
 
-bf, error = run('test.ms', '&0 = 1 &0 += 2')
+bf, error = run('test.ms', '&0 = 1 &0 += 2 out &0')
 if error:
     print(error)

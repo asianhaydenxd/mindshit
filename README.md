@@ -14,8 +14,15 @@ A compiled language written in python that compiles to brainfuck.
     &1 = 2
 
 ## Operator Assignment
-`<cell> += | -= <literal>`
+`<cell> +=/-= <literal>`
 *Go to cell and add or subtract it with the literal*
 
     &0 += 4
     &0 -= 2
+
+## Output
+`out <cell>`
+*Go to cell and add or subtract it with the literal*
+
+    &0 = 1
+    out &0
