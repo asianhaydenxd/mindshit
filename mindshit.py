@@ -464,10 +464,11 @@ class Compiler:
         if node.token.full == (Tk.KW, 'out'):
             if type(node.right) == AddressNode:
                 return (self.cmd_output(node.right.address))
-            
             if type(node.right) == BinaryOpNode:
                 return (self.visit_binary_op(node.right) + 
                         self.cmd_output())
+            if type(node.right) == IdentifierNode:
+                return (self.cmd_output(self.aliases[node.right.title]))
         
         raise RuntimeError('unary operator not defined in compiler')
                 
