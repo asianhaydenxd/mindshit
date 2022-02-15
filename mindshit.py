@@ -8,6 +8,7 @@ DIGITS = '0123456789'
 LETTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZŠŒŽšœžŸÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþ'
 WHITESPACE = ' \t\n'
 CELLS = 25
+RAM_SIZE = 8
 
 # Position
 class Position:
@@ -333,7 +334,7 @@ class Parser:
         if token.full == (Tk.OP, '&'):
             address_token = self.token
             self.next()
-            return AddressNode(address_token.value), None
+            return AddressNode(address_token.value + RAM_SIZE), None
         
         return None, Error('Exception Raised', 'invalid factor', token.start, token.end)
         
