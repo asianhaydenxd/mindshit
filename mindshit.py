@@ -395,9 +395,12 @@ class Compiler:
                     return self.cmd_move(node.left.address) + self.cmd_sub(node.right.value)
                 
     def visit_unary_op(self, node: UnaryOpNode) -> str:
-        if type(node.right) == AddressNode:
-            if node.token.full == (Tk.KW, 'out'):
+        if node.token.full == (Tk.KW, 'out'):
+            if type(node.right) == AddressNode:
                 return self.cmd_output(node.right.address)
+            
+            if type(node.right) == BinaryOpNode:
+                return self.visit_binary_op(node.right) + self.cmd_output()
                 
     # Instructions
     
@@ -468,6 +471,6 @@ def run(filename: str, filetext: str):
 
     return bf, None
 
-bf, error = run('test.ms', '&0 = 1 &0 += 2 out &0')
+bf, error = run('test.ms', 'out &0 += 5')
 if error:
     print(error)

@@ -26,3 +26,9 @@ A compiled language written in python that compiles to brainfuck.
 
     &0 = 1
     out &0
+
+## Output Statement
+`out <statement>`
+*Carry out statement and output outcome*
+
+    out &0 = 1
