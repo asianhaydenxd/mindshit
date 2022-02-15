@@ -7,7 +7,6 @@ Self = TypeVar('Self')
 DIGITS = '0123456789'
 LETTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZŠŒŽšœžŸÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþ'
 WHITESPACE = ' \t\n'
-CELLS = 25
 RAM_SIZE = 8
 
 # Position
@@ -369,7 +368,6 @@ class Compiler:
     
     def compile(self) -> str:
         self.result = ''
-        self.tape = [0 for _ in range(CELLS)]
         self.pointer = 0
         self.visit(self.mainnode)
         return self.result
@@ -385,21 +383,25 @@ class Compiler:
         if type(node.left) == AddressNode:
             if type(node.right) == LiteralNode:
                 if node.token.full == (Tk.OP, '='):
-                    return self.cmd_move(node.left.address) + self.cmd_set(node.right.value)
+                    return (self.cmd_move(node.left.address) + 
+                            self.cmd_set(node.right.value))
                 
                 if node.token.full == (Tk.OP, '+='):
-                    return self.cmd_move(node.left.address) + self.cmd_add(node.right.value)
+                    return (self.cmd_move(node.left.address) + 
+                            self.cmd_add(node.right.value))
                 
                 if node.token.full == (Tk.OP, '-='):
-                    return self.cmd_move(node.left.address) + self.cmd_sub(node.right.value)
+                    return (self.cmd_move(node.left.address) + 
+                            self.cmd_sub(node.right.value))
                 
     def visit_unary_op(self, node: UnaryOpNode) -> str:
         if node.token.full == (Tk.KW, 'out'):
             if type(node.right) == AddressNode:
-                return self.cmd_output(node.right.address)
+                return (self.cmd_output(node.right.address))
             
             if type(node.right) == BinaryOpNode:
-                return self.visit_binary_op(node.right) + self.cmd_output()
+                return (self.visit_binary_op(node.right) + 
+                        self.cmd_output())
                 
     # Instructions
     
@@ -423,12 +425,10 @@ class Compiler:
         return '<' * address_decrement
 
     def cmd_add(self, value_increment: int) -> str:
-        self.tape[self.pointer] += value_increment if value_increment != None else 1
-        return '+' * value_increment
+        return '+' * value_increment if value_increment != None else 1
 
     def cmd_sub(self, value_decrement: int) -> str:
-        self.tape[self.pointer] -= value_decrement if value_decrement != None else 1
-        return '-' * value_decrement
+        return '-' * value_decrement if value_decrement != None else 1
 
     def cmd_output(self, output_address: int = None) -> str:
         return self.move_append(output_address, '.')

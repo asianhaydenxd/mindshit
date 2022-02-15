@@ -22,13 +22,13 @@ A compiled language written in python that compiles to brainfuck.
 
 ## Output
 `out <cell>`
-*Go to cell and add or subtract it with the literal*
+*Output the value of a cell*
 
     &0 = 1
     out &0
 
 ## Output Statement
 `out <statement>`
-*Carry out statement and output outcome*
+*Carry out statement and output its return value*
 
     out &0 = 1
