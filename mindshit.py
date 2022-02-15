@@ -172,6 +172,14 @@ class Lexer:
                 
             elif self.chars(2) == '/*':
                 self.skip_multiline_comment()
+
+            elif self.chars(2) == '+=':
+                tokens.append(Token(Tk.OP, '+=', self.pos))
+                self.next(2)
+
+            elif self.chars(2) == '-=':
+                tokens.append(Token(Tk.OP, '-=', self.pos))
+                self.next(2)
                 
             elif self.char == '&':
                 tokens.append(Token(Tk.OP, '&', self.pos))
@@ -304,7 +312,7 @@ class Parser:
         return left, error
             
     def expr(self):
-        return self.binary_op(self.factor, [(Tk.OP, '=')])
+        return self.binary_op(self.factor, [(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-=')])
             
     def factor(self) -> ValueNode:
         token = self.token
@@ -346,10 +354,14 @@ class Compiler:
                 self.result += self.visit_binary_op(child)
     
     def visit_binary_op(self, node: BinaryOpNode) -> str:
-        if node.token.full == (Tk.OP, '='):
-            if type(node.left) == AddressNode:
-                if type(node.right) == LiteralNode:
+        if type(node.left) == AddressNode:
+            if type(node.right) == LiteralNode:
+                if node.token.full == (Tk.OP, '='):
                     return self.cmd_move(node.left.address) + self.cmd_set(node.right.value)
+                if node.token.full == (Tk.OP, '+='):
+                    return self.cmd_move(node.left.address) + self.cmd_add(node.right.value)
+                if node.token.full == (Tk.OP, '-='):
+                    return self.cmd_move(node.left.address) + self.cmd_sub(node.right.value)
                 
     # Instructions
     
@@ -420,6 +432,6 @@ def run(filename: str, filetext: str):
 
     return bf, None
 
-bf, error = run('test.ms', '&0 = 1 &1 = 2')
+bf, error = run('test.ms', '&0 = 1 &0 += 2')
 if error:
     print(error)

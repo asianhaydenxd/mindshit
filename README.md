@@ -12,3 +12,10 @@ A compiled language written in python that compiles to brainfuck.
 
     &0 = 1
     &1 = 2
+
+## Operator Assignment
+`<cell> = <literal>`
+*Go to cell and add or subtract it with the literal*
+
+    &0 += 4
+    &0 -= 2
