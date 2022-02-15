@@ -1,4 +1,5 @@
 # Imports
+from ast import Add
 from typing import Callable, TypeVar, Union, List, Tuple
 
 Self = TypeVar('Self')
@@ -192,6 +193,10 @@ class Lexer:
                 tokens.append(Token(Tk.OP, '=', self.pos))
                 self.next()
             
+            elif self.char == ':':
+                tokens.append(Token(Tk.OP, ':', self.pos))
+                self.next()
+            
             else:
                 return [], IllegalCharError(f"'{self.char}'", self.pos)
         
@@ -269,6 +274,10 @@ class AddressNode:
 
 ValueNode = Union[LiteralNode, AddressNode]
 
+class IdentifierNode:
+    def __init__(self, title) -> None:
+        self.title = title
+
 class BinaryOpNode:
     def __init__(self, left, token, right) -> None:
         self.left = left
@@ -331,11 +340,11 @@ class Parser:
         return function()
             
     def expr(self):
-        return self.unary_op(
-            [(Tk.KW, 'out')], 
-            lambda: self.binary_op(
-                [(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-=')], 
-                self.factor
+        return self.unary_op([(Tk.KW, 'out')], 
+            lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-=')], 
+                lambda: self.binary_op([(Tk.OP, ':')],
+                    self.factor
+                )
             )
         )
             
@@ -359,6 +368,9 @@ class Parser:
             address_token = self.token
             self.next()
             return AddressNode(address_token.value + RAM_SIZE), None
+
+        if token.type == Tk.ID:
+            return IdentifierNode(token.value), None
         
         return None, Error('Exception Raised', 'invalid factor', token.start, token.end)
         
@@ -368,6 +380,7 @@ class Compiler:
     
     def compile(self) -> str:
         self.result = ''
+        self.aliases = {}
         self.pointer = 0
         self.visit(self.mainnode)
         return self.result
@@ -380,19 +393,48 @@ class Compiler:
                 self.result += self.visit_unary_op(child)
     
     def visit_binary_op(self, node: BinaryOpNode) -> str:
-        if type(node.left) == AddressNode:
+        if node.token.full == (Tk.OP, '='):
             if type(node.right) == LiteralNode:
-                if node.token.full == (Tk.OP, '='):
+                if type(node.left) == AddressNode:
                     return (self.cmd_move(node.left.address) + 
                             self.cmd_set(node.right.value))
+                if type(node.left) == BinaryOpNode:
+                    return (self.visit_binary_op(node.left) + 
+                            self.cmd_set(node.right.value))
+                if type(node.left) == IdentifierNode:
+                    return (self.cmd_move(self.aliases[node.left.title]) + 
+                            self.cmd_set(node.right.value))
                 
-                if node.token.full == (Tk.OP, '+='):
+        if node.token.full == (Tk.OP, '+='):
+            if type(node.right) == LiteralNode:
+                if type(node.left) == AddressNode:
                     return (self.cmd_move(node.left.address) + 
                             self.cmd_add(node.right.value))
+                if type(node.left) == BinaryOpNode:
+                    return (self.visit_binary_op(node.left) + 
+                            self.cmd_add(node.right.value))
+                if type(node.left) == IdentifierNode:
+                    return (self.cmd_move(self.aliases[node.left.title]) + 
+                            self.cmd_add(node.right.value))
                 
-                if node.token.full == (Tk.OP, '-='):
+        if node.token.full == (Tk.OP, '-='):
+            if type(node.right) == LiteralNode:
+                if type(node.left) == AddressNode:
                     return (self.cmd_move(node.left.address) + 
                             self.cmd_sub(node.right.value))
+                if type(node.left) == BinaryOpNode:
+                    return (self.visit_binary_op(node.left) + 
+                            self.cmd_sub(node.right.value))
+                if type(node.left) == IdentifierNode:
+                    return (self.cmd_move(self.aliases[node.left.title]) + 
+                            self.cmd_sub(node.right.value))
+        
+        if node.token.full == (Tk.OP, ':'):
+            if type(node.left) == IdentifierNode and type(node.right) == AddressNode:
+                self.aliases[node.left.title] = node.right.address
+                return (self.cmd_move(node.right.address))
+                    
+        raise RuntimeError('binary operator not defined in compiler')
                 
     def visit_unary_op(self, node: UnaryOpNode) -> str:
         if node.token.full == (Tk.KW, 'out'):
@@ -402,6 +444,8 @@ class Compiler:
             if type(node.right) == BinaryOpNode:
                 return (self.visit_binary_op(node.right) + 
                         self.cmd_output())
+        
+        raise RuntimeError('unary operator not defined in compiler')
                 
     # Instructions
     

@@ -32,3 +32,11 @@ A compiled language written in python that compiles to brainfuck.
 *Carry out statement and output its return value*
 
     out &0 = 1
+
+## Aliasing
+`out <statement>`
+*Attach identifiers to certain cells*
+
+    a: &0
+    b: &1 = 5
+    a = 1
