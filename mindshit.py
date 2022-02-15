@@ -453,26 +453,32 @@ class Compiler:
                 return '<' * (pointer - address) + symbol
         return symbol
 
-def run(filename: str, filetext: str):
+def run(filename: str, filetext: str, debug: bool = False):
     lexer = Lexer(filename, filetext)
     tokens, error = lexer.lex()
-    if error:
-        return None, error
-    print(tokens)
+    
+    if error: return None, error
+
+    if debug: print(tokens)
         
     parser = Parser(tokens)
     ast, error = parser.parse()
-    if error:
-        return None, error
+    
+    if error: return None, error
 
     compiler = Compiler(ast)
     bf = compiler.compile()
-    print(bf)
+    
+    if debug: print(bf)
 
     return bf, None
 
-file_name = 'main.ms'
-with open(file_name, 'r') as file:
-    bf, error = run(file_name, file.read())
-if error:
-    print(error)
+if __name__ == '__main__':
+    file_name = 'main.ms'
+    with open(file_name, 'r') as file:
+        bf, error = run(file_name, file.read(), debug = False)
+    if error:
+        print(error)
+    else:
+        import brainfuck
+        brainfuck.evaluate(bf)
