@@ -471,6 +471,8 @@ def run(filename: str, filetext: str):
 
     return bf, None
 
-bf, error = run('test.ms', 'out &0 += 5')
+file_name = 'main.ms'
+with open(file_name, 'r') as file:
+    bf, error = run(file_name, file.read())
 if error:
     print(error)
