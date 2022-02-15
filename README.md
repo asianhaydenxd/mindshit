@@ -8,7 +8,7 @@ A compiled language written in python that compiles to brainfuck.
 
 ## Assignment
 `<cell> = <literal>`
-*Go to cell and set it to the literal*
+*Go to cell, set it to zero, and add the literal*
 
     &0 = 1
     &1 = 2

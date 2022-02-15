@@ -1,5 +1,4 @@
 # Imports
-from email.headerregistry import Address
 from typing import Callable, TypeVar, Union, List, Tuple
 
 Self = TypeVar('Self')
@@ -413,12 +412,7 @@ class Compiler:
         return '<' * (pointer - address_target)
     
     def cmd_set(self, value_target: int) -> str:
-        current_value = self.tape[self.pointer]
-        self.tape[self.pointer] = value_target
-        
-        if value_target > current_value:
-            return '+' * (value_target - current_value)
-        return '-' * (current_value - value_target)
+        return '[-]' + '+' * value_target
 
     def cmd_right(self, address_increment: int) -> str:
         self.pointer += address_increment if address_increment != None else 1
@@ -476,7 +470,7 @@ def run(filename: str, filetext: str, debug: bool = False):
 if __name__ == '__main__':
     file_name = 'main.ms'
     with open(file_name, 'r') as file:
-        bf, error = run(file_name, file.read(), debug = False)
+        bf, error = run(file_name, file.read(), debug = True)
     if error:
         print(error)
     else:
