@@ -1,5 +1,4 @@
 # Imports
-from ast import Add
 from typing import Callable, TypeVar, Union, List, Tuple
 
 Self = TypeVar('Self')
@@ -184,6 +183,10 @@ class Lexer:
             elif self.chars(2) == '-=':
                 tokens.append(Token(Tk.OP, '-=', self.pos))
                 self.next(2)
+
+            elif self.chars(2) == '->':
+                tokens.append(Token(Tk.OP, '->', self.pos))
+                self.next(2)
                 
             elif self.char == '&':
                 tokens.append(Token(Tk.OP, '&', self.pos))
@@ -341,7 +344,7 @@ class Parser:
             
     def expr(self):
         return self.unary_op([(Tk.KW, 'out')], 
-            lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-=')], 
+            lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->')], 
                 lambda: self.binary_op([(Tk.OP, ':')],
                     self.factor
                 )
@@ -428,6 +431,27 @@ class Compiler:
                 if type(node.left) == IdentifierNode:
                     return (self.cmd_move(self.aliases[node.left.title]) + 
                             self.cmd_sub(node.right.value))
+
+        if node.token.full == (Tk.OP, '->'):
+            if type(node.right) == AddressNode:
+                if type(node.left) == AddressNode:
+                    return (self.cmd_move(node.right.address) + '[-]' + 
+                            self.cmd_move(node.left.address) + '[' + 
+                            self.cmd_move(node.right.address) + '+' + 
+                            self.cmd_move(node.left.address) + '-]' + 
+                            self.cmd_move(node.right.address))
+                if type(node.left) == BinaryOpNode:
+                    return (self.cmd_move(node.right.address) + '[-]' + 
+                            self.cmd_move(node.left.right.address) + '[' + 
+                            self.cmd_move(node.right.address) + '+' + 
+                            self.cmd_move(node.left.right.address) + '-]' + 
+                            self.cmd_move(node.right.address))
+                if type(node.left) == IdentifierNode:
+                    return (self.cmd_move(node.right.address) + '[-]' + 
+                            self.cmd_move(self.aliases[node.left.title]) + '[' + 
+                            self.cmd_move(node.right.address) + '+' + 
+                            self.cmd_move(self.aliases[node.left.title]) + '-]' + 
+                            self.cmd_move(node.right.address))
         
         if node.token.full == (Tk.OP, ':'):
             if type(node.left) == IdentifierNode and type(node.right) == AddressNode:

@@ -40,3 +40,10 @@ A compiled language written in python that compiles to brainfuck.
     a: &0
     b: &1 = 5
     a = 1
+
+## Relocating
+`<cell> -> <cell>`
+*Set target cell to current cell and clear the current cell*
+
+    &0 = 1
+    &0 -> &1
