@@ -452,6 +452,46 @@ class Compiler:
                             self.cmd_move(node.right.address) + '+' + 
                             self.cmd_move(self.aliases[node.left.title]) + '-]' + 
                             self.cmd_move(node.right.address))
+
+            if type(node.right) == IdentifierNode:
+                if type(node.left) == AddressNode:
+                    return (self.cmd_move(self.aliases[node.right.title]) + '[-]' + 
+                            self.cmd_move(node.left.address) + '[' + 
+                            self.cmd_move(self.aliases[node.right.title]) + '+' + 
+                            self.cmd_move(node.left.address) + '-]' + 
+                            self.cmd_move(self.aliases[node.right.title]))
+                if type(node.left) == BinaryOpNode:
+                    return (self.cmd_move(self.aliases[node.right.title]) + '[-]' + 
+                            self.cmd_move(node.left.right.address) + '[' + 
+                            self.cmd_move(self.aliases[node.right.title]) + '+' + 
+                            self.cmd_move(node.left.right.address) + '-]' + 
+                            self.cmd_move(self.aliases[node.right.title]))
+                if type(node.left) == IdentifierNode:
+                    return (self.cmd_move(self.aliases[node.right.title]) + '[-]' + 
+                            self.cmd_move(self.aliases[node.left.title]) + '[' + 
+                            self.cmd_move(self.aliases[node.right.title]) + '+' + 
+                            self.cmd_move(self.aliases[node.left.title]) + '-]' + 
+                            self.cmd_move(self.aliases[node.right.title]))
+            
+            if type(node.right) == BinaryOpNode:
+                if type(node.left) == AddressNode:
+                    return (self.cmd_move(node.right.right.address) + '[-]' + 
+                            self.cmd_move(node.left.address) + '[' + 
+                            self.cmd_move(node.right.right.address) + '+' + 
+                            self.cmd_move(node.left.address) + '-]' + 
+                            self.cmd_move(node.right.right.address))
+                if type(node.left) == BinaryOpNode:
+                    return (self.cmd_move(node.right.right.address) + '[-]' + 
+                            self.cmd_move(node.left.right.address) + '[' + 
+                            self.cmd_move(node.right.right.address) + '+' + 
+                            self.cmd_move(node.left.right.address) + '-]' + 
+                            self.cmd_move(node.right.right.address))
+                if type(node.left) == IdentifierNode:
+                    return (self.cmd_move(node.right.right.address) + '[-]' + 
+                            self.cmd_move(self.aliases[node.left.title]) + '[' + 
+                            self.cmd_move(node.right.right.address) + '+' + 
+                            self.cmd_move(self.aliases[node.left.title]) + '-]' + 
+                            self.cmd_move(node.right.right.address))
         
         if node.token.full == (Tk.OP, ':'):
             if type(node.left) == IdentifierNode and type(node.right) == AddressNode:

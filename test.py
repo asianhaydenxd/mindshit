@@ -24,6 +24,7 @@ def main():
     test(10, 'Output alias statement', 'out a: &0 = 1', '[-]+.')
     test(11, 'Relocating', '&0 = 1 &0 -> &1', '[-]+>[-]<[>+<-]>')
     test(12, 'Relocating alias', 'a: &0 = 1 a -> &1', '[-]+>[-]<[>+<-]>')
+    test(13, 'Relocating alias to alias', 'a: &0 = 1 b: &1 a -> b', '[-]+>[-]<[>+<-]>')
 
 if __name__ == '__main__':
     main()
