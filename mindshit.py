@@ -200,6 +200,14 @@ class Lexer:
                 tokens.append(Token(Tk.OP, ':', self.pos))
                 self.next()
             
+            elif self.char == '(':
+                tokens.append(Token(Tk.OP, '(', self.pos))
+                self.next()
+                
+            elif self.char == ')':
+                tokens.append(Token(Tk.OP, ')', self.pos))
+                self.next()
+            
             else:
                 return [], IllegalCharError(f"'{self.char}'", self.pos)
         
@@ -371,6 +379,12 @@ class Parser:
             address_token = self.token
             self.next()
             return AddressNode(address_token.value + RAM_SIZE), None
+
+        if token.full == (Tk.OP, '('):
+            expr = self.expr()
+            if self.token.full == (Tk.OP, ')'):
+                self.next()
+                return expr
 
         if token.type == Tk.ID:
             return IdentifierNode(token.value), None
