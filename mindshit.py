@@ -389,128 +389,54 @@ class Compiler:
         return self.result
     
     def visit(self, node) -> None:
-        for child in node.body:
-            if type(child) == BinaryOpNode:
-                self.result += self.visit_binary_op(child)
-            if type(child) == UnaryOpNode:
-                self.result += self.visit_unary_op(child)
-    
-    def visit_binary_op(self, node: BinaryOpNode) -> str:
-        if node.token.full == (Tk.OP, '='):
-            if type(node.right) == LiteralNode:
-                if type(node.left) == AddressNode:
-                    return (self.cmd_move(node.left.address) + 
-                            self.cmd_set(node.right.value))
-                if type(node.left) == BinaryOpNode:
-                    return (self.visit_binary_op(node.left) + 
-                            self.cmd_set(node.right.value))
-                if type(node.left) == IdentifierNode:
-                    return (self.cmd_move(self.aliases[node.left.title]) + 
-                            self.cmd_set(node.right.value))
-                
-        if node.token.full == (Tk.OP, '+='):
-            if type(node.right) == LiteralNode:
-                if type(node.left) == AddressNode:
-                    return (self.cmd_move(node.left.address) + 
-                            self.cmd_add(node.right.value))
-                if type(node.left) == BinaryOpNode:
-                    return (self.visit_binary_op(node.left) + 
-                            self.cmd_add(node.right.value))
-                if type(node.left) == IdentifierNode:
-                    return (self.cmd_move(self.aliases[node.left.title]) + 
-                            self.cmd_add(node.right.value))
-                
-        if node.token.full == (Tk.OP, '-='):
-            if type(node.right) == LiteralNode:
-                if type(node.left) == AddressNode:
-                    return (self.cmd_move(node.left.address) + 
-                            self.cmd_sub(node.right.value))
-                if type(node.left) == BinaryOpNode:
-                    return (self.visit_binary_op(node.left) + 
-                            self.cmd_sub(node.right.value))
-                if type(node.left) == IdentifierNode:
-                    return (self.cmd_move(self.aliases[node.left.title]) + 
-                            self.cmd_sub(node.right.value))
-
-        if node.token.full == (Tk.OP, '->'):
-            if type(node.right) == AddressNode:
-                if type(node.left) == AddressNode:
-                    return (self.cmd_move(node.right.address) + '[-]' + 
-                            self.cmd_move(node.left.address) + '[' + 
-                            self.cmd_move(node.right.address) + '+' + 
-                            self.cmd_move(node.left.address) + '-]' + 
-                            self.cmd_move(node.right.address))
-                if type(node.left) == BinaryOpNode:
-                    return (self.cmd_move(node.right.address) + '[-]' + 
-                            self.cmd_move(node.left.right.address) + '[' + 
-                            self.cmd_move(node.right.address) + '+' + 
-                            self.cmd_move(node.left.right.address) + '-]' + 
-                            self.cmd_move(node.right.address))
-                if type(node.left) == IdentifierNode:
-                    return (self.cmd_move(node.right.address) + '[-]' + 
-                            self.cmd_move(self.aliases[node.left.title]) + '[' + 
-                            self.cmd_move(node.right.address) + '+' + 
-                            self.cmd_move(self.aliases[node.left.title]) + '-]' + 
-                            self.cmd_move(node.right.address))
-
-            if type(node.right) == IdentifierNode:
-                if type(node.left) == AddressNode:
-                    return (self.cmd_move(self.aliases[node.right.title]) + '[-]' + 
-                            self.cmd_move(node.left.address) + '[' + 
-                            self.cmd_move(self.aliases[node.right.title]) + '+' + 
-                            self.cmd_move(node.left.address) + '-]' + 
-                            self.cmd_move(self.aliases[node.right.title]))
-                if type(node.left) == BinaryOpNode:
-                    return (self.cmd_move(self.aliases[node.right.title]) + '[-]' + 
-                            self.cmd_move(node.left.right.address) + '[' + 
-                            self.cmd_move(self.aliases[node.right.title]) + '+' + 
-                            self.cmd_move(node.left.right.address) + '-]' + 
-                            self.cmd_move(self.aliases[node.right.title]))
-                if type(node.left) == IdentifierNode:
-                    return (self.cmd_move(self.aliases[node.right.title]) + '[-]' + 
-                            self.cmd_move(self.aliases[node.left.title]) + '[' + 
-                            self.cmd_move(self.aliases[node.right.title]) + '+' + 
-                            self.cmd_move(self.aliases[node.left.title]) + '-]' + 
-                            self.cmd_move(self.aliases[node.right.title]))
-            
-            if type(node.right) == BinaryOpNode:
-                if type(node.left) == AddressNode:
-                    return (self.cmd_move(node.right.right.address) + '[-]' + 
-                            self.cmd_move(node.left.address) + '[' + 
-                            self.cmd_move(node.right.right.address) + '+' + 
-                            self.cmd_move(node.left.address) + '-]' + 
-                            self.cmd_move(node.right.right.address))
-                if type(node.left) == BinaryOpNode:
-                    return (self.cmd_move(node.right.right.address) + '[-]' + 
-                            self.cmd_move(node.left.right.address) + '[' + 
-                            self.cmd_move(node.right.right.address) + '+' + 
-                            self.cmd_move(node.left.right.address) + '-]' + 
-                            self.cmd_move(node.right.right.address))
-                if type(node.left) == IdentifierNode:
-                    return (self.cmd_move(node.right.right.address) + '[-]' + 
-                            self.cmd_move(self.aliases[node.left.title]) + '[' + 
-                            self.cmd_move(node.right.right.address) + '+' + 
-                            self.cmd_move(self.aliases[node.left.title]) + '-]' + 
-                            self.cmd_move(node.right.right.address))
+        if type(node) == MainNode:
+            for child in node.body:
+                if type(child) == BinaryOpNode:
+                    self.result += self.visit(child)
+                if type(child) == UnaryOpNode:
+                    self.result += self.visit(child)
         
-        if node.token.full == (Tk.OP, ':'):
-            if type(node.left) == IdentifierNode and type(node.right) == AddressNode:
-                self.aliases[node.left.title] = node.right.address
-                return (self.cmd_move(node.right.address))
+        if type(node) == BinaryOpNode:
+            if node.token.full == (Tk.OP, '='):
+                if type(node.right) == LiteralNode:
+                    return self.visit(node.left) + self.cmd_set(node.right.value)
                     
-        raise RuntimeError('binary operator not defined in compiler')
+            if node.token.full == (Tk.OP, '+='):
+                if type(node.right) == LiteralNode:
+                    return self.visit(node.left) + self.cmd_add(node.right.value)
+                    
+            if node.token.full == (Tk.OP, '-='):
+                if type(node.right) == LiteralNode:
+                    return self.visit(node.left) + self.cmd_sub(node.right.value)
+
+            if node.token.full == (Tk.OP, '->'):
+                return (
+                    self.visit(node.right) + '[-]' + 
+                    self.visit(node.left) + '[' + 
+                    self.visit(node.right) + '+' + 
+                    self.visit(node.left) + '-]' + 
+                    self.visit(node.right)
+                )
                 
-    def visit_unary_op(self, node: UnaryOpNode) -> str:
-        if node.token.full == (Tk.KW, 'out'):
-            if type(node.right) == AddressNode:
-                return (self.cmd_output(node.right.address))
-            if type(node.right) == BinaryOpNode:
-                return (self.visit_binary_op(node.right) + 
-                        self.cmd_output())
-            if type(node.right) == IdentifierNode:
-                return (self.cmd_output(self.aliases[node.right.title]))
+            if node.token.full == (Tk.OP, ':'):
+                if type(node.left) == IdentifierNode:
+                    self.aliases[node.left.title] = node.right.address
+                    return self.visit(node.right)
+                        
+            raise RuntimeError('binary operator not defined in compiler')
         
-        raise RuntimeError('unary operator not defined in compiler')
+        if type(node) == UnaryOpNode:
+            if node.token.full == (Tk.KW, 'out'):
+                return self.visit(node.right) + self.cmd_output()
+            
+            raise RuntimeError('unary operator not defined in compiler')
+        
+        if type(node) == AddressNode:
+            return self.cmd_move(node.address)
+        
+        if type(node) == IdentifierNode:
+            if node.title in self.aliases:
+                return self.cmd_move(self.aliases[node.title])
                 
     # Instructions
     

@@ -3,9 +3,9 @@ A compiled language written in python that compiles to brainfuck.
 
 ## Todo
 
-- [ ] Create a function to make new compiler operator implementations more efficient as opposed to comparing every input for every operator
-- [ ] Implement `<->` operator for swapping two cells
+- [x] Create a function to make new compiler operator implementations more efficient as opposed to comparing every input for every operator
 - [ ] Allow assigning to other cells `&1 = &0`
+- [ ] Implement `<->` operator for swapping two cells
 - [ ] Implement `in` keyword for input (returns input ASCII integer)
 - [ ] Implement arrays (`z: &0 = 0, 1, 2` for defining, `z#0` or `&0#0` for accessing)
 
