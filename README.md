@@ -4,7 +4,7 @@ A compiled language written in python that compiles to brainfuck.
 ## Todo
 
 - [x] Make compiler operator implementations more efficient
-- [ ] Allow assigning to other cells `&1 = &0`
+- [x] Allow assigning to other cells `&1 = &0`
 - [ ] `<->` operator for swapping two cells
 - [ ] `in` keyword for input (returns input ASCII integer)
 - [ ] `while` statements
