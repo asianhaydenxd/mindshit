@@ -434,7 +434,10 @@ class Compiler:
                 
             if node.token.full == (Tk.OP, ':'):
                 if type(node.left) == IdentifierNode:
-                    self.aliases[node.left.title] = node.right.address
+                    try:
+                        self.aliases[node.left.title] = node.right.address
+                    except AttributeError:
+                        self.aliases[node.left.title] = self.aliases[node.right.title]
                     return self.visit(node.right)
                         
             raise RuntimeError('binary operator not defined in compiler')
