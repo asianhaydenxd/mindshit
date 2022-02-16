@@ -3,11 +3,13 @@ A compiled language written in python that compiles to brainfuck.
 
 ## Todo
 
-- [x] Create a function to make new compiler operator implementations more efficient as opposed to comparing every input for every operator
+- [x] Make compiler operator implementations more efficient
 - [ ] Allow assigning to other cells `&1 = &0`
-- [ ] Implement `<->` operator for swapping two cells
-- [ ] Implement `in` keyword for input (returns input ASCII integer)
-- [ ] Implement arrays (`z: &0 = 0, 1, 2` for defining, `z#0` or `&0#0` for accessing)
+- [ ] `<->` operator for swapping two cells
+- [ ] `in` keyword for input (returns input ASCII integer)
+- [ ] `while` statements
+- [ ] `if`, `elif` and `else` statements
+- [ ] Implement arrays (`z: &0 = 0, 1, 2` for defining, `z[0]` or `&0[0]` for accessing)
 
 ## Features
 
