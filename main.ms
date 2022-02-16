@@ -1,7 +1,5 @@
-a: &0 = 'a'
-&1 = 'b'
-&2 = 'c'
-&1 = &0
-out &1
-out &0
-out &2
+av: &0 = 'a'
+bv: &1 = 'b'
+av <-> bv
+out av
+out bv

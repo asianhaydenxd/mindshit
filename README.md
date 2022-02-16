@@ -5,7 +5,7 @@ A compiled language written in python that compiles to brainfuck.
 
 - [x] Make compiler operator implementations more efficient
 - [x] Allow assigning to other cells `&1 = &0`
-- [ ] `<->` operator for swapping two cells
+- [x] `<->` operator for swapping two cells
 - [ ] `in` keyword for input (returns input ASCII integer)
 - [ ] `while` statements
 - [ ] `if`, `elif` and `else` statements
@@ -59,6 +59,14 @@ A compiled language written in python that compiles to brainfuck.
 
     &0 = 1
     &0 -> &1
+
+### Swapping
+`<cell> -> <cell>`
+*Swap the values of two cells*
+
+    &0 = 1
+    &1 = 2
+    &0 <-> &1
 
 ### Assignment to cells
 `<cell> = <cell>`

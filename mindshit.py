@@ -169,7 +169,11 @@ class Lexer:
                 token, error = self.make_char()
                 if error: return [], error
                 tokens.append(token)
-            
+
+            elif self.chars(3) == '<->':
+                tokens.append(Token(Tk.OP, '<->', self.pos))
+                self.next(3)
+
             elif self.chars(2) == '//':
                 self.skip_oneline_comment()
                 
@@ -352,7 +356,7 @@ class Parser:
             
     def expr(self):
         return self.unary_op([(Tk.KW, 'out')], 
-            lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->')], 
+            lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->'), (Tk.OP, '<->')], 
                 lambda: self.binary_op([(Tk.OP, ':')],
                     self.factor
                 )
@@ -423,6 +427,7 @@ class Compiler:
                 result += self.cmd_move(0) + '['
                 result += self.visit(node.right) + '+'
                 result += self.cmd_move(0) + '-]'
+                result += self.visit(node.left)
                 return result
                     
             if node.token.full == (Tk.OP, '+='):
@@ -441,6 +446,19 @@ class Compiler:
                     self.visit(node.left) + '-]' + 
                     self.visit(node.right)
                 )
+            
+            if node.token.full == (Tk.OP, '<->'):
+                result = self.cmd_move(0) + '[-]'
+                result += self.visit(node.left) + '['
+                result += self.cmd_move(0) + '+'
+                result += self.visit(node.left) + '-]'
+                result += self.visit(node.right) + '['
+                result += self.visit(node.left) + '+'
+                result += self.visit(node.right) + '-]'
+                result += self.cmd_move(0) + '['
+                result += self.visit(node.right) + '+'
+                result += self.cmd_move(0) + '-]'
+                return result
                 
             if node.token.full == (Tk.OP, ':'):
                 if type(node.left) == IdentifierNode:
