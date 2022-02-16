@@ -59,3 +59,10 @@ A compiled language written in python that compiles to brainfuck.
 
     &0 = 1
     &0 -> &1
+
+### Assignment to cells
+`<cell> = <cell>`
+*Set the cell value to the value of the target cell*
+
+    &0 = 1
+    &1 = &0

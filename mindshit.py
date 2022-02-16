@@ -414,6 +414,16 @@ class Compiler:
             if node.token.full == (Tk.OP, '='):
                 if type(node.right) == LiteralNode:
                     return self.visit(node.left) + self.cmd_set(node.right.value)
+                result = self.cmd_move(0) + '[-]'
+                result += self.visit(node.left) + '[-]'
+                result += self.visit(node.right) + '['
+                result += self.visit(node.left) + '+'
+                result += self.cmd_move(0) + '+'
+                result += self.visit(node.right) + '-]'
+                result += self.cmd_move(0) + '['
+                result += self.visit(node.right) + '+'
+                result += self.cmd_move(0) + '-]'
+                return result
                     
             if node.token.full == (Tk.OP, '+='):
                 if type(node.right) == LiteralNode:
