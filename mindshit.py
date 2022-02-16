@@ -112,6 +112,7 @@ class Tk:
         
         # IO
         'out',
+        'in',
     ]
 
 class Token:
@@ -358,7 +359,9 @@ class Parser:
         return self.unary_op([(Tk.KW, 'out')], 
             lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->'), (Tk.OP, '<->')], 
                 lambda: self.binary_op([(Tk.OP, ':')],
-                    self.factor
+                    lambda: self.unary_op([(Tk.KW, 'in')],
+                        self.factor
+                    )
                 )
             )
         )
@@ -462,7 +465,10 @@ class Compiler:
                 
             if node.token.full == (Tk.OP, ':'):
                 if type(node.left) == IdentifierNode:
-                    self.aliases[node.left.title] = node.right.address
+                    try:
+                        self.aliases[node.left.title] = node.right.address
+                    except AttributeError:
+                        self.aliases[node.left.title] = node.right.right.address
                     return self.visit(node.right)
                         
             raise RuntimeError('binary operator not defined in compiler')
@@ -470,6 +476,9 @@ class Compiler:
         if type(node) == UnaryOpNode:
             if node.token.full == (Tk.KW, 'out'):
                 return self.visit(node.right) + self.cmd_output()
+            
+            if node.token.full == (Tk.KW, 'in'):
+                return self.visit(node.right) + self.cmd_input()
             
             raise RuntimeError('unary operator not defined in compiler')
         
