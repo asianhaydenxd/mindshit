@@ -7,7 +7,7 @@ A compiled language written in python that compiles to brainfuck.
 - [x] Allow assigning to other cells `&1 = &0`
 - [x] `<->` operator for swapping two cells
 - [x] `in` keyword for input (returns input ASCII integer)
-- [ ] `while` statements
+- [x] `while` statements
 - [ ] `if`, `elif` and `else` statements
 - [ ] Implement arrays (`z: &0 = 0, 1, 2` for defining, `z[0]` or `&0[0]` for accessing)
 
