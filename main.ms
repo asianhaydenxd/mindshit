@@ -1,16 +1,9 @@
-a: &0 = 10
-num: &1
+a: &0 = true
+b: &1 = false
 
-while &0
-    a -= 1
-    num = a
-    num += 48
-    out num
-    &5 = 5
-    while &5
-        &5 -= 1
-        &6 = &5
-        &6 += 48
-        out &6
+if a
+    out &2 = 'x'
+    if b
+        out &2 = 'y'
     end
 end

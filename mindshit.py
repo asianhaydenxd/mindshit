@@ -380,7 +380,7 @@ class Parser:
         return function()
             
     def expr(self):
-        return self.block_op([(Tk.KW, 'while')],
+        return self.block_op([(Tk.KW, 'while'), (Tk.KW, 'if')],
             lambda: self.unary_op([(Tk.KW, 'out')], 
                 lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->'), (Tk.OP, '<->')], 
                     lambda: self.binary_op([(Tk.OP, ':')],
@@ -441,11 +441,21 @@ class Compiler:
                 self.result += self.visit(child)
         
         if type(node) == ConditionalNode:
-            result = self.visit(node.condition) + '['
-            for child in node.body:
-                result += self.visit(child)
-            result += self.visit(node.condition) + ']'
-            return result
+            if node.token.full == (Tk.KW, 'while'):
+                result = self.visit(node.condition) + '['
+                for child in node.body:
+                    result += self.visit(child)
+                result += self.visit(node.condition) + ']'
+                return result
+            
+            if node.token.full == (Tk.KW, 'if'):
+                result = self.cmd_move(0) + '[-]'
+                result += self.visit(node.condition) + '['
+                for child in node.body:
+                    result += self.visit(child)
+                result += self.cmd_move(0) + ']'
+                result += self.visit(node.condition)
+                return result
         
         if type(node) == BinaryOpNode:
             if node.token.full == (Tk.OP, '='):
