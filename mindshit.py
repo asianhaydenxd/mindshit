@@ -367,11 +367,15 @@ class Parser:
     def block_op(self, ops: List[Tuple[str]], function: Callable):
         if self.token.full in ops:
             self.next()
-            blocknode = ConditionalNode(function(), [])
+            condition, error = function()
+            blocknode = ConditionalNode(condition, [])
+            error = None
             while self.token.full != (Tk.KW, 'end'):
-                blocknode.body.append(function())
+                instruction, error = self.expr()
+                blocknode.body.append(instruction)
+                print(instruction)
             self.next()
-            return blocknode, None
+            return blocknode, error
         return function()
             
     def expr(self):
@@ -436,10 +440,10 @@ class Compiler:
                 self.result += self.visit(child)
         
         if type(node) == ConditionalNode:
-            result = self.visit(node.condition[0]) + '['
+            result = self.visit(node.condition) + '['
             for child in node.body:
-                result += self.visit(child[0])
-            result += self.visit(node.condition[0]) + ']'
+                result += self.visit(child)
+            result += self.visit(node.condition) + ']'
             return result
         
         if type(node) == BinaryOpNode:
