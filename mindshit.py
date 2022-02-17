@@ -316,7 +316,8 @@ class UnaryOpNode:
         return str(vars(self))
 
 class ConditionalNode:
-    def __init__(self, condition, body) -> None:
+    def __init__(self, token, condition, body) -> None:
+        self.token = token
         self.condition = condition
         self.body = body
 
@@ -366,9 +367,10 @@ class Parser:
 
     def block_op(self, ops: List[Tuple[str]], function: Callable):
         if self.token.full in ops:
+            op_token = self.token
             self.next()
             condition, error = function()
-            blocknode = ConditionalNode(condition, [])
+            blocknode = ConditionalNode(op_token, condition, [])
             error = None
             while self.token.full != (Tk.KW, 'end'):
                 instruction, error = self.expr()
