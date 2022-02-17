@@ -81,3 +81,12 @@ A compiled language written in python that compiles to brainfuck.
 
     &0 = 1
     &1 = &0
+
+### While loops
+`while <cell> ... end`
+*Execute a block of code until the specified condition cell is false*
+
+    i: &0 = 5
+    while i
+        i -= 1
+    end

@@ -101,6 +101,10 @@ class Tk:
     EOF = 'eof'
 
     KEYWORDS = [
+        # Loop blocks
+        'while',
+        'end',
+        
         # Conditional blocks
         'if',
         'elif',
@@ -311,6 +315,11 @@ class UnaryOpNode:
     def __repr__(self) -> str:
         return str(vars(self))
 
+class ConditionalNode:
+    def __init__(self, condition, body) -> None:
+        self.condition = condition
+        self.body = body
+
 class MainNode:
     def __init__(self, body) -> None:
         self.body = body
@@ -354,13 +363,25 @@ class Parser:
             right, error = function()
             return UnaryOpNode(op_token, right), error
         return function()
+
+    def block_op(self, ops: List[Tuple[str]], function: Callable):
+        if self.token.full in ops:
+            self.next()
+            blocknode = ConditionalNode(function(), [])
+            while self.token.full != (Tk.KW, 'end'):
+                blocknode.body.append(function())
+            self.next()
+            return blocknode, None
+        return function()
             
     def expr(self):
-        return self.unary_op([(Tk.KW, 'out')], 
-            lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->'), (Tk.OP, '<->')], 
-                lambda: self.binary_op([(Tk.OP, ':')],
-                    lambda: self.unary_op([(Tk.KW, 'in')],
-                        self.factor
+        return self.block_op([(Tk.KW, 'while')],
+            lambda: self.unary_op([(Tk.KW, 'out')], 
+                lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->'), (Tk.OP, '<->')], 
+                    lambda: self.binary_op([(Tk.OP, ':')],
+                        lambda: self.unary_op([(Tk.KW, 'in')],
+                            self.factor
+                        )
                     )
                 )
             )
@@ -412,10 +433,14 @@ class Compiler:
     def visit(self, node) -> None:
         if type(node) == MainNode:
             for child in node.body:
-                if type(child) == BinaryOpNode:
-                    self.result += self.visit(child)
-                if type(child) == UnaryOpNode:
-                    self.result += self.visit(child)
+                self.result += self.visit(child)
+        
+        if type(node) == ConditionalNode:
+            result = self.visit(node.condition[0]) + '['
+            for child in node.body:
+                result += self.visit(child[0])
+            result += self.visit(node.condition[0]) + ']'
+            return result
         
         if type(node) == BinaryOpNode:
             if node.token.full == (Tk.OP, '='):
