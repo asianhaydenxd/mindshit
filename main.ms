@@ -1,3 +1,2 @@
-a: &0 = 'a'
-b: a
-out b
+out a: in &0
+out a

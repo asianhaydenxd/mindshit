@@ -11,55 +11,16 @@
 
 import sys
 
-class _Getch:
-    """Gets a single character from standard input.  Does not echo to the screen."""
-    def __init__(self):
-        try:
-            self.impl = _GetchWindows()
-        except ImportError:
-            self.impl = _GetchUnix()
-
-    def __call__(self): return self.impl()
-
-
-class _GetchUnix:
-    def __init__(self):
-        import tty, sys
-
-    def __call__(self):
-        import sys, tty, termios
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
-
-
-class _GetchWindows:
-    def __init__(self):
-        import msvcrt
-
-    def __call__(self):
-        import msvcrt
-        return msvcrt.getch()
-
-
-getch = _Getch()
-
 def execute(filename):
   f = open(filename, "r")
   evaluate(f.read())
   f.close()
 
-
 def evaluate(code):
   code     = cleanup(list(code))
   bracemap = buildbracemap(code)
 
-  cells, codeptr, cellptr = [0], 0, 0
+  cells, codeptr, cellptr, inputchars = [0], 0, 0, []
 
   while codeptr < len(code):
     command = code[codeptr]
@@ -80,7 +41,13 @@ def evaluate(code):
     if command == "[" and cells[cellptr] == 0: codeptr = bracemap[codeptr]
     if command == "]" and cells[cellptr] != 0: codeptr = bracemap[codeptr]
     if command == ".": sys.stdout.write(chr(cells[cellptr]))
-    if command == ",": cells[cellptr] = ord(getch.getch())
+    if command == ",":
+        if len(inputchars) == 0:
+            read = input()
+            for letter in reversed(read):
+                inputchars.append(letter)
+        cells[cellptr] = ord(inputchars[-1])
+        inputchars.pop()
       
     codeptr += 1
 

@@ -112,6 +112,7 @@ class Tk:
         
         # IO
         'out',
+        'in',
     ]
 
 class Token:
@@ -169,7 +170,11 @@ class Lexer:
                 token, error = self.make_char()
                 if error: return [], error
                 tokens.append(token)
-            
+
+            elif self.chars(3) == '<->':
+                tokens.append(Token(Tk.OP, '<->', self.pos))
+                self.next(3)
+
             elif self.chars(2) == '//':
                 self.skip_oneline_comment()
                 
@@ -352,9 +357,11 @@ class Parser:
             
     def expr(self):
         return self.unary_op([(Tk.KW, 'out')], 
-            lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->')], 
+            lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->'), (Tk.OP, '<->')], 
                 lambda: self.binary_op([(Tk.OP, ':')],
-                    self.factor
+                    lambda: self.unary_op([(Tk.KW, 'in')],
+                        self.factor
+                    )
                 )
             )
         )
@@ -414,6 +421,17 @@ class Compiler:
             if node.token.full == (Tk.OP, '='):
                 if type(node.right) == LiteralNode:
                     return self.visit(node.left) + self.cmd_set(node.right.value)
+                result = self.cmd_move(0) + '[-]'
+                result += self.visit(node.left) + '[-]'
+                result += self.visit(node.right) + '['
+                result += self.visit(node.left) + '+'
+                result += self.cmd_move(0) + '+'
+                result += self.visit(node.right) + '-]'
+                result += self.cmd_move(0) + '['
+                result += self.visit(node.right) + '+'
+                result += self.cmd_move(0) + '-]'
+                result += self.visit(node.left)
+                return result
                     
             if node.token.full == (Tk.OP, '+='):
                 if type(node.right) == LiteralNode:
@@ -431,13 +449,26 @@ class Compiler:
                     self.visit(node.left) + '-]' + 
                     self.visit(node.right)
                 )
+            
+            if node.token.full == (Tk.OP, '<->'):
+                result = self.cmd_move(0) + '[-]'
+                result += self.visit(node.left) + '['
+                result += self.cmd_move(0) + '+'
+                result += self.visit(node.left) + '-]'
+                result += self.visit(node.right) + '['
+                result += self.visit(node.left) + '+'
+                result += self.visit(node.right) + '-]'
+                result += self.cmd_move(0) + '['
+                result += self.visit(node.right) + '+'
+                result += self.cmd_move(0) + '-]'
+                return result
                 
             if node.token.full == (Tk.OP, ':'):
                 if type(node.left) == IdentifierNode:
                     try:
                         self.aliases[node.left.title] = node.right.address
                     except AttributeError:
-                        self.aliases[node.left.title] = self.aliases[node.right.title]
+                        self.aliases[node.left.title] = node.right.right.address
                     return self.visit(node.right)
                         
             raise RuntimeError('binary operator not defined in compiler')
@@ -445,6 +476,9 @@ class Compiler:
         if type(node) == UnaryOpNode:
             if node.token.full == (Tk.KW, 'out'):
                 return self.visit(node.right) + self.cmd_output()
+            
+            if node.token.full == (Tk.KW, 'in'):
+                return self.visit(node.right) + self.cmd_input()
             
             raise RuntimeError('unary operator not defined in compiler')
         

@@ -4,9 +4,9 @@ A compiled language written in python that compiles to brainfuck.
 ## Todo
 
 - [x] Make compiler operator implementations more efficient
-- [ ] Allow assigning to other cells `&1 = &0`
-- [ ] `<->` operator for swapping two cells
-- [ ] `in` keyword for input (returns input ASCII integer)
+- [x] Allow assigning to other cells `&1 = &0`
+- [x] `<->` operator for swapping two cells
+- [x] `in` keyword for input (returns input ASCII integer)
 - [ ] `while` statements
 - [ ] `if`, `elif` and `else` statements
 - [ ] Implement arrays (`z: &0 = 0, 1, 2` for defining, `z[0]` or `&0[0]` for accessing)
@@ -39,6 +39,13 @@ A compiled language written in python that compiles to brainfuck.
     &0 = 1
     out &0
 
+### Input
+`in <cell>`
+*Write input to a cell*
+
+    a: in &0
+    out a
+
 ### Output Statement
 `out <statement>`
 *Carry out statement and output its return value*
@@ -59,3 +66,18 @@ A compiled language written in python that compiles to brainfuck.
 
     &0 = 1
     &0 -> &1
+
+### Swapping
+`<cell> -> <cell>`
+*Swap the values of two cells*
+
+    &0 = 1
+    &1 = 2
+    &0 <-> &1
+
+### Assignment to cells
+`<cell> = <cell>`
+*Set the cell value to the value of the target cell*
+
+    &0 = 1
+    &1 = &0
