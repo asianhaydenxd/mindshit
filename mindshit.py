@@ -461,19 +461,35 @@ class Compiler:
             if node.token.full == (Tk.OP, '+='):
                 if type(node.right) == LiteralNode:
                     return self.visit(node.left) + self.cmd_add(node.right.value)
+                result = self.cmd_move(0) + '[-]'
+                result += self.visit(node.right) + '['
+                result += self.visit(node.left) + '+'
+                result += self.cmd_move(0) + '+'
+                result += self.visit(node.right) + '-]'
+                result += self.cmd_move(0) + '['
+                result += self.visit(node.right) + '+'
+                result += self.cmd_move(0) + '-]'
+                return result
                     
             if node.token.full == (Tk.OP, '-='):
                 if type(node.right) == LiteralNode:
                     return self.visit(node.left) + self.cmd_sub(node.right.value)
+                result = self.cmd_move(0) + '[-]'
+                result += self.visit(node.right) + '['
+                result += self.visit(node.left) + '-'
+                result += self.cmd_move(0) + '+'
+                result += self.visit(node.right) + '-]'
+                result += self.cmd_move(0) + '['
+                result += self.visit(node.right) + '+'
+                result += self.cmd_move(0) + '-]'
+                return result
 
             if node.token.full == (Tk.OP, '->'):
-                return (
-                    self.visit(node.right) + '[-]' + 
-                    self.visit(node.left) + '[' + 
-                    self.visit(node.right) + '+' + 
-                    self.visit(node.left) + '-]' + 
-                    self.visit(node.right)
-                )
+                result = self.visit(node.right) + '[-]'
+                result += self.visit(node.left) + '['
+                result += self.visit(node.right) + '+'
+                result += self.visit(node.left) + '-]'
+                result += self.visit(node.right)
             
             if node.token.full == (Tk.OP, '<->'):
                 result = self.cmd_move(0) + '[-]'
