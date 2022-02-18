@@ -526,6 +526,7 @@ class Compiler:
                 result += self.visit(node.right) + '+'
                 result += self.visit(node.left) + '-]'
                 result += self.visit(node.right)
+                return result
             
             if node.token.full == (Tk.OP, '<->'):
                 result = self.cmd_move(0) + '[-]'
