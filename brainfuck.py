@@ -93,5 +93,4 @@ def main():
         print("Usage:", sys.argv[0], "filename")
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()
