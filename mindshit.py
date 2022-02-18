@@ -588,8 +588,6 @@ class Compiler:
         if type(node) == BinaryOpNode:
             if node.token.full == (Tk.OP, '='):
                 temp0 = self.memoryusage.find_use_cell()
-                if type(node.right) == LiteralNode:
-                    return self.visit(node.left) + self.cmd_set(node.right.value)
                 result = self.cmd_move(temp0) + '[-]'
                 result += self.visit(node.left) + '[-]'
                 result += self.visit(node.right) + '['
@@ -605,8 +603,6 @@ class Compiler:
                     
             if node.token.full == (Tk.OP, '+='):
                 temp0 = self.memoryusage.find_use_cell()
-                if type(node.right) == LiteralNode:
-                    return self.visit(node.left) + self.cmd_add(node.right.value)
                 result = self.cmd_move(temp0) + '[-]'
                 result += self.visit(node.right) + '['
                 result += self.visit(node.left) + '+'
@@ -620,8 +616,6 @@ class Compiler:
                     
             if node.token.full == (Tk.OP, '-='):
                 temp0 = self.memoryusage.find_use_cell()
-                if type(node.right) == LiteralNode:
-                    return self.visit(node.left) + self.cmd_sub(node.right.value)
                 result = self.cmd_move(temp0) + '[-]'
                 result += self.visit(node.right) + '['
                 result += self.visit(node.left) + '-'
@@ -684,6 +678,13 @@ class Compiler:
             cell_found = self.memoryusage.find_use_cell()
             self.aliases[node.title] = cell_found
             return self.cmd_move(self.aliases[node.title])
+        
+        if type(node) == LiteralNode:
+            if node.value in self.literals:
+                return self.cmd_move(self.literals[node.value])
+            cell_found = self.memoryusage.find_use_cell()
+            self.literals[node.value] = cell_found
+            return self.cmd_move(cell_found) + self.cmd_set(node.value)
                 
     # Instructions
     
