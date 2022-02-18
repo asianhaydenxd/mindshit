@@ -287,16 +287,25 @@ class Lexer:
 class LiteralNode:
     def __init__(self, value: int) -> None:
         self.value = value
+    
+    def __repr__(self) -> str:
+        return str(self.__dict__)
 
 class AddressNode:
     def __init__(self, address: int) -> None:
         self.address = address
+    
+    def __repr__(self) -> str:
+        return str(self.__dict__)
 
 ValueNode = Union[LiteralNode, AddressNode]
 
 class IdentifierNode:
     def __init__(self, title) -> None:
         self.title = title
+    
+    def __repr__(self) -> str:
+        return str(self.__dict__)
 
 class BinaryOpNode:
     def __init__(self, left, token, right) -> None:
@@ -320,10 +329,17 @@ class ConditionalNode:
         self.token = token
         self.condition = condition
         self.body = body
+        self.elsebody = elsebody
+    
+    def __repr__(self) -> str:
+        return str(self.__dict__)
 
 class MainNode:
     def __init__(self, body) -> None:
         self.body = body
+    
+    def __repr__(self) -> str:
+        return str(self.__dict__)
 
 class Parser:
     def __init__(self, tokens: List[Token]) -> None:
