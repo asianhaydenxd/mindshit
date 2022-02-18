@@ -385,7 +385,6 @@ class Parser:
                     instruction, error = self.expr()
                     blocknode.elsebody.append(instruction)
                 self.next()
-
             return blocknode, error
         return function()
             
@@ -636,7 +635,7 @@ def run(filename: str, filetext: str, debug: bool = False):
 if __name__ == '__main__':
     file_name = 'main.ms'
     with open(file_name, 'r') as file:
-        bf, error = run(file_name, file.read(), debug = True)
+        bf, error = run(file_name, file.read(), debug = False)
     if error:
         print(error)
     else:
