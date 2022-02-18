@@ -464,7 +464,78 @@ class Parser:
             return IdentifierNode(token.value), None
         
         return None, Error('Exception Raised', 'invalid factor', token.start, token.end)
+
+# Infinity-simulating list
+class InfiniteList:
+    def __init__(self, object):
+        self.object = object
+        self.list = []
         
+    def __getitem__(self, index):
+        try:
+            return self.list[index]
+        except IndexError:
+            self.list += [self.object for _ in range(index+1 - len(self.list))]
+            return self.list[index]
+    
+    def __setitem__(self, index, value):
+        try:
+            self.list[index] = value
+        except IndexError:
+            self.list += [self.object for _ in range(index+1 - len(self.list))]
+            self.list[index] = value
+            
+    def __iter__(self):
+        return iter(self.list)
+    
+    def __repr__(self):
+        return str(self.list)
+
+# Infinity-like list of boolean values indicating whether each slot is used
+class MemoryUsageList(InfiniteList):
+    def __init__(self):
+        super().__init__(False)
+    
+    def use(self, index):
+        self[index] = True
+    
+    def rmv(self, index):
+        self[index] = False
+    
+    def find_cell(self):
+        for index, value in enumerate(self.list):
+            if not value:
+                return index
+        self[len(self.list)] = False
+        return len(self.list) - 1
+    
+    def find_array(self, size):
+        total_size = 0
+        start_index = None
+        for index, used in enumerate(self.list):
+            if not used:
+                total_size += 1
+            else:
+                total_size = 0
+                
+            if total_size == 1:
+                start_index = index
+                
+            if total_size == size:
+                return start_index
+        self[len(self.list)-1+size] = False
+        return len(self.list)-size
+    
+    def find_use_cell(self):
+        cell_found = self.find_cell()
+        self.use(cell_found)
+        return cell_found
+    
+    def find_use_array(self):
+        array_found = self.find_array()
+        self.use(array_found)
+        return array_found
+
 class Compiler:
     def __init__(self, mainnode) -> None:
         self.mainnode = mainnode
