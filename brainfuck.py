@@ -16,11 +16,12 @@ def execute(filename):
   evaluate(f.read())
   f.close()
 
-def evaluate(code):
+def evaluate(code, returning: bool = False, default_input: str = ''):
+  out      = ''
   code     = cleanup(list(code))
   bracemap = buildbracemap(code)
 
-  cells, codeptr, cellptr, inputchars = [0], 0, 0, []
+  cells, codeptr, cellptr, inputchars = [0], 0, 0, list(default_input)
 
   while codeptr < len(code):
     command = code[codeptr]
@@ -40,19 +41,30 @@ def evaluate(code):
 
     if command == "[" and cells[cellptr] == 0: codeptr = bracemap[codeptr]
     if command == "]" and cells[cellptr] != 0: codeptr = bracemap[codeptr]
-    if command == ".": sys.stdout.write(chr(cells[cellptr]))
+    if command == ".": 
+      if returning:
+        out += chr(cells[cellptr])
+      else:
+        sys.stdout.write(chr(cells[cellptr]))
     if command == ",":
-        if len(inputchars) == 0:
-            read = input()
-            if read:
-              for letter in reversed(read):
-                  inputchars.append(ord(letter))
-            else:
-              input.chars.append(0)
-        cells[cellptr] = inputchars[-1]
-        inputchars.pop()
+        if returning:
+          if len(inputchars) == 0: inputchars.append(0)
+          cells[cellptr] = inputchars[-1]
+          inputchars.pop()
+        else:
+          if len(inputchars) == 0:
+              read = input()
+              if read:
+                for letter in reversed(read):
+                    inputchars.append(ord(letter))
+              else:
+                inputchars.append(0)
+          cells[cellptr] = inputchars[-1]
+          inputchars.pop()
       
     codeptr += 1
+  
+  return out
 
 
 def cleanup(code):
