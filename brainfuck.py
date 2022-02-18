@@ -44,9 +44,12 @@ def evaluate(code):
     if command == ",":
         if len(inputchars) == 0:
             read = input()
-            for letter in reversed(read):
-                inputchars.append(letter)
-        cells[cellptr] = ord(inputchars[-1])
+            if read:
+              for letter in reversed(read):
+                  inputchars.append(ord(letter))
+            else:
+              input.chars.append(0)
+        cells[cellptr] = inputchars[-1]
         inputchars.pop()
       
     codeptr += 1
