@@ -325,7 +325,7 @@ class UnaryOpNode:
         return str(vars(self))
 
 class ConditionalNode:
-    def __init__(self, token, condition, body) -> None:
+    def __init__(self, token, condition, body, elsebody = []) -> None:
         self.token = token
         self.condition = condition
         self.body = body
@@ -387,20 +387,36 @@ class Parser:
             self.next()
             condition, error = function()
             blocknode = ConditionalNode(op_token, condition, [])
-            error = None
-            while not self.token.full in [(Tk.KW, 'end'), (Tk.KW, 'else')]:
+            
+            while not self.token.full in [(Tk.KW, 'end'), (Tk.KW, 'else'), (Tk.KW, 'elif')]:
                 instruction, error = self.expr()
                 blocknode.body.append(instruction)
-            
-            if self.token.full == (Tk.KW, 'end'):
+                
+            childblocknode = blocknode
+                
+            while self.token.full == (Tk.KW, 'elif'):
+                op_token = self.token
                 self.next()
-            elif self.token.full == (Tk.KW, 'else'):
+                condition, error = function()
+                newblocknode = ConditionalNode(op_token, condition, [])
+                
+                while not self.token.full in [(Tk.KW, 'end'), (Tk.KW, 'else'), (Tk.KW, 'elif')]:
+                    instruction, error = self.expr()
+                    newblocknode.body.append(instruction)
+                
+                childblocknode.elsebody = [newblocknode]
+                childblocknode = newblocknode
+                
+            if self.token.full == (Tk.KW, 'else'):
                 self.next()
-                blocknode.elsebody = []
                 while self.token.full != (Tk.KW, 'end'):
                     instruction, error = self.expr()
-                    blocknode.elsebody.append(instruction)
+                    childblocknode.elsebody = []
+                    childblocknode.elsebody.append(instruction)
+                
+            if self.token.full == (Tk.KW, 'end'):
                 self.next()
+            
             return blocknode, error
         return function()
             
@@ -473,9 +489,9 @@ class Compiler:
                 result += self.visit(node.condition) + ']'
                 return result
             
-            if node.token.full == (Tk.KW, 'if'):
                 result = self.cmd_move(1) + '[-]+'
                 result += self.cmd_move(2) + '[-]'
+            if node.token.full in [(Tk.KW, 'if'), (Tk.KW, 'elif')]:
                 result += self.visit(node.condition) + '['
                 for child in node.body:
                     result += self.visit(child)

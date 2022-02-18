@@ -1,7 +1,17 @@
-c: &0 = true
-
-if c
-    out char1: &1 = 'a'
+if false
+    out 'a'
+elif false
+    out 'b'
 else
-    out char2: &2 = 'b'
+    if false
+        out 'c'
+    else
+        if false
+            out 'd'
+        elif false
+            out 'e'
+        else
+            out 'f'
+        end
+    end
 end
