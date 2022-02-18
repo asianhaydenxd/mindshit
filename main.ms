@@ -1,8 +1,7 @@
-a: &0 = 10
-num: &1
+c: &0 = true
 
-while &0
-    a -= 1
-    num = a
-    num += 48
-    out num
+if c
+    out char1: &1 = 'a'
+else
+    out char2: &2 = 'b'
+end

@@ -8,7 +8,8 @@ A compiled language written in python that compiles to brainfuck.
 - [x] `<->` operator for swapping two cells
 - [x] `in` keyword for input (returns input ASCII integer)
 - [x] `while` statements
-- [ ] `if`, `elif` and `else` statements
+- [x] `if` and `else` statements
+- [ ] `elif` statements
 - [ ] Implement arrays (`z: &0 = 0, 1, 2` for defining, `z[0]` or `&0[0]` for accessing)
 
 ## Features
@@ -89,4 +90,24 @@ A compiled language written in python that compiles to brainfuck.
     i: &0 = 5
     while i
         i -= 1
+    end
+
+### If statements
+`if <cell> ... end`
+*Execute a block of code if the specified condition cell is true*
+
+    i: &0 = 1
+    if i
+        i += 1
+    end
+
+### If-else statements
+`if <cell> ... else ... end`
+*Execute one block of code if the specified condition cell is true and another if false*
+
+    i: &0 = 1
+    if i
+        i += 1
+    else
+        i += 2
     end

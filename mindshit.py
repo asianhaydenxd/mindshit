@@ -316,7 +316,8 @@ class UnaryOpNode:
         return str(vars(self))
 
 class ConditionalNode:
-    def __init__(self, condition, body) -> None:
+    def __init__(self, token, condition, body) -> None:
+        self.token = token
         self.condition = condition
         self.body = body
 
@@ -364,18 +365,32 @@ class Parser:
             return UnaryOpNode(op_token, right), error
         return function()
 
-    def block_op(self, ops: List[Tuple[str]], function: Callable):
+    def conditional_op(self, ops: List[Tuple[str]], function: Callable):
         if self.token.full in ops:
+            op_token = self.token
             self.next()
-            blocknode = ConditionalNode(function(), [])
-            while self.token.full != (Tk.KW, 'end'):
-                blocknode.body.append(function())
-            self.next()
-            return blocknode, None
+            condition, error = function()
+            blocknode = ConditionalNode(op_token, condition, [])
+            error = None
+            while not self.token.full in [(Tk.KW, 'end'), (Tk.KW, 'else')]:
+                instruction, error = self.expr()
+                blocknode.body.append(instruction)
+            
+            if self.token.full == (Tk.KW, 'end'):
+                self.next()
+            elif self.token.full == (Tk.KW, 'else'):
+                self.next()
+                blocknode.elsebody = []
+                while self.token.full != (Tk.KW, 'end'):
+                    instruction, error = self.expr()
+                    blocknode.elsebody.append(instruction)
+                self.next()
+
+            return blocknode, error
         return function()
             
     def expr(self):
-        return self.block_op([(Tk.KW, 'while')],
+        return self.conditional_op([(Tk.KW, 'while'), (Tk.KW, 'if')],
             lambda: self.unary_op([(Tk.KW, 'out')], 
                 lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->'), (Tk.OP, '<->')], 
                     lambda: self.binary_op([(Tk.OP, ':')],
@@ -436,11 +451,33 @@ class Compiler:
                 self.result += self.visit(child)
         
         if type(node) == ConditionalNode:
-            result = self.visit(node.condition[0]) + '['
-            for child in node.body:
-                result += self.visit(child[0])
-            result += self.visit(node.condition[0]) + ']'
-            return result
+            if node.token.full == (Tk.KW, 'while'):
+                result = self.visit(node.condition) + '['
+                for child in node.body:
+                    result += self.visit(child)
+                result += self.visit(node.condition) + ']'
+                return result
+            
+            if node.token.full == (Tk.KW, 'if'):
+                result = self.cmd_move(1) + '[-]+'
+                result += self.cmd_move(2) + '[-]'
+                result += self.visit(node.condition) + '['
+                for child in node.body:
+                    result += self.visit(child)
+                result += self.cmd_move(1) + '-'
+                result += self.visit(node.condition) + '['
+                result += self.cmd_move(2) + '+'
+                result += self.visit(node.condition) + '-]]'
+                result += self.cmd_move(2) + '['
+                result += self.visit(node.condition) + '+'
+                result += self.cmd_move(2) + '-]'
+                result += self.cmd_move(1) + '['
+                if hasattr(node, 'elsebody'):
+                    for child in node.elsebody:
+                        result += self.visit(child)
+                result += self.cmd_move(1) + '-]'
+                result += self.visit(node.condition)
+                return result
         
         if type(node) == BinaryOpNode:
             if node.token.full == (Tk.OP, '='):
