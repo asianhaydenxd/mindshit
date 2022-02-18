@@ -7,7 +7,6 @@ Self = TypeVar('Self')
 DIGITS = '0123456789'
 LETTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZŠŒŽšœžŸÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþ'
 WHITESPACE = ' \t\n'
-RAM_SIZE = 8
 
 # Position
 class Position:
@@ -452,7 +451,7 @@ class Parser:
         if token.full == (Tk.OP, '&'):
             address_token = self.token
             self.next()
-            return AddressNode(address_token.value + RAM_SIZE), None
+            return AddressNode(address_token.value), None
 
         if token.full == (Tk.OP, '('):
             expr = self.expr()
@@ -543,6 +542,8 @@ class Compiler:
     def compile(self) -> str:
         self.result = ''
         self.aliases = {}
+        self.literals = {}
+        self.memoryusage = MemoryUsageList()
         self.pointer = 0
         self.visit(self.mainnode)
         return self.result
@@ -560,67 +561,76 @@ class Compiler:
                 result += self.visit(node.condition) + ']'
                 return result
             
-                result = self.cmd_move(1) + '[-]+'
-                result += self.cmd_move(2) + '[-]'
             if node.token.full in [(Tk.KW, 'if'), (Tk.KW, 'elif')]:
+                temp0 = self.memoryusage.find_use_cell()
+                temp1 = self.memoryusage.find_use_cell()
+                result = self.cmd_move(temp0) + '[-]+'
+                result += self.cmd_move(temp1) + '[-]'
                 result += self.visit(node.condition) + '['
                 for child in node.body:
                     result += self.visit(child)
-                result += self.cmd_move(1) + '-'
+                result += self.cmd_move(temp0) + '-'
                 result += self.visit(node.condition) + '['
-                result += self.cmd_move(2) + '+'
+                result += self.cmd_move(temp1) + '+'
                 result += self.visit(node.condition) + '-]]'
-                result += self.cmd_move(2) + '['
+                result += self.cmd_move(temp1) + '['
                 result += self.visit(node.condition) + '+'
-                result += self.cmd_move(2) + '-]'
-                result += self.cmd_move(1) + '['
-                if hasattr(node, 'elsebody'):
-                    for child in node.elsebody:
-                        result += self.visit(child)
-                result += self.cmd_move(1) + '-]'
+                result += self.cmd_move(temp1) + '-]'
+                result += self.cmd_move(temp0) + '['
+                for child in node.elsebody:
+                    result += self.visit(child)
+                result += self.cmd_move(temp0) + '-]'
                 result += self.visit(node.condition)
+                self.memoryusage.rmv(temp0)
+                self.memoryusage.rmv(temp1)
                 return result
         
         if type(node) == BinaryOpNode:
             if node.token.full == (Tk.OP, '='):
+                temp0 = self.memoryusage.find_use_cell()
                 if type(node.right) == LiteralNode:
                     return self.visit(node.left) + self.cmd_set(node.right.value)
-                result = self.cmd_move(0) + '[-]'
+                result = self.cmd_move(temp0) + '[-]'
                 result += self.visit(node.left) + '[-]'
                 result += self.visit(node.right) + '['
                 result += self.visit(node.left) + '+'
-                result += self.cmd_move(0) + '+'
+                result += self.cmd_move(temp0) + '+'
                 result += self.visit(node.right) + '-]'
-                result += self.cmd_move(0) + '['
+                result += self.cmd_move(temp0) + '['
                 result += self.visit(node.right) + '+'
-                result += self.cmd_move(0) + '-]'
+                result += self.cmd_move(temp0) + '-]'
                 result += self.visit(node.left)
+                self.memoryusage.rmv(temp0)
                 return result
                     
             if node.token.full == (Tk.OP, '+='):
+                temp0 = self.memoryusage.find_use_cell()
                 if type(node.right) == LiteralNode:
                     return self.visit(node.left) + self.cmd_add(node.right.value)
-                result = self.cmd_move(0) + '[-]'
+                result = self.cmd_move(temp0) + '[-]'
                 result += self.visit(node.right) + '['
                 result += self.visit(node.left) + '+'
-                result += self.cmd_move(0) + '+'
+                result += self.cmd_move(temp0) + '+'
                 result += self.visit(node.right) + '-]'
-                result += self.cmd_move(0) + '['
+                result += self.cmd_move(temp0) + '['
                 result += self.visit(node.right) + '+'
-                result += self.cmd_move(0) + '-]'
+                result += self.cmd_move(temp0) + '-]'
+                self.memoryusage.rmv(temp0)
                 return result
                     
             if node.token.full == (Tk.OP, '-='):
+                temp0 = self.memoryusage.find_use_cell()
                 if type(node.right) == LiteralNode:
                     return self.visit(node.left) + self.cmd_sub(node.right.value)
-                result = self.cmd_move(0) + '[-]'
+                result = self.cmd_move(temp0) + '[-]'
                 result += self.visit(node.right) + '['
                 result += self.visit(node.left) + '-'
-                result += self.cmd_move(0) + '+'
+                result += self.cmd_move(temp0) + '+'
                 result += self.visit(node.right) + '-]'
-                result += self.cmd_move(0) + '['
+                result += self.cmd_move(temp0) + '['
                 result += self.visit(node.right) + '+'
-                result += self.cmd_move(0) + '-]'
+                result += self.cmd_move(temp0) + '-]'
+                self.memoryusage.rmv(temp0)
                 return result
 
             if node.token.full == (Tk.OP, '->'):
@@ -632,16 +642,18 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '<->'):
-                result = self.cmd_move(0) + '[-]'
+                temp0 = self.memoryusage.find_use_cell()
+                result = self.cmd_move(temp0) + '[-]'
                 result += self.visit(node.left) + '['
-                result += self.cmd_move(0) + '+'
+                result += self.cmd_move(temp0) + '+'
                 result += self.visit(node.left) + '-]'
                 result += self.visit(node.right) + '['
                 result += self.visit(node.left) + '+'
                 result += self.visit(node.right) + '-]'
-                result += self.cmd_move(0) + '['
+                result += self.cmd_move(temp0) + '['
                 result += self.visit(node.right) + '+'
-                result += self.cmd_move(0) + '-]'
+                result += self.cmd_move(temp0) + '-]'
+                self.memoryusage.rmv(temp0)
                 return result
                 
             if node.token.full == (Tk.OP, ':'):
@@ -669,7 +681,8 @@ class Compiler:
         if type(node) == IdentifierNode:
             if node.title in self.aliases:
                 return self.cmd_move(self.aliases[node.title])
-            self.aliases[node.title] = len(self.aliases) + RAM_SIZE
+            cell_found = self.memoryusage.find_use_cell()
+            self.aliases[node.title] = cell_found
             return self.cmd_move(self.aliases[node.title])
                 
     # Instructions
