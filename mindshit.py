@@ -566,6 +566,8 @@ class Compiler:
         if type(node) == IdentifierNode:
             if node.title in self.aliases:
                 return self.cmd_move(self.aliases[node.title])
+            self.aliases[node.title] = len(self.aliases) + RAM_SIZE
+            return self.cmd_move(self.aliases[node.title])
                 
     # Instructions
     
