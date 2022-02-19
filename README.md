@@ -9,7 +9,8 @@ A compiled language written in python that compiles to brainfuck.
 - [x] `in` keyword for input (returns input ASCII integer)
 - [x] `while` statements
 - [x] `if`, `elif` and `else` statements
-- [ ] Operators (`+`, `-`, `*`, `/`, `%`, `==`, `!=`, `>`, `<`, `>=`, `<=`, `and`, `or`, `not`)
+- [x] Operators (`+`, `-`)
+- [ ] Remaining operators (`*`, `/`, `%`, `==`, `!=`, `>`, `<`, `>=`, `<=`, `and`, `or`, `not`)
 - [ ] Arrays (`array = [0, 1, 2]` for defining, `array[0]` for accessing)
 - [ ] Inline functions (`fn <name>(<params>) ... end`)
 - [ ] `include` keyword for including other files
@@ -114,7 +115,3 @@ A compiled language written in python that compiles to brainfuck.
     else
         i += 2
     end
-
-.
-    
-    fn main(a, b)

@@ -113,6 +113,11 @@ class Tk:
         'true',
         'false',
         
+        # Logical operators
+        'and',
+        'or',
+        'not',
+        
         # IO
         'out',
         'in',
@@ -196,6 +201,22 @@ class Lexer:
                 tokens.append(Token(Tk.OP, '->', self.pos))
                 self.next(2)
                 
+            elif self.chars(2) == '==':
+                tokens.append(Token(Tk.OP, '==', self.pos))
+                self.next(2)
+                
+            elif self.chars(2) == '!=':
+                tokens.append(Token(Tk.OP, '!=', self.pos))
+                self.next(2)
+                
+            elif self.chars(2) == '>=':
+                tokens.append(Token(Tk.OP, '>=', self.pos))
+                self.next(2)
+                
+            elif self.chars(2) == '<=':
+                tokens.append(Token(Tk.OP, '<=', self.pos))
+                self.next(2)
+                
             elif self.char == '&':
                 tokens.append(Token(Tk.OP, '&', self.pos))
                 self.next()
@@ -214,6 +235,34 @@ class Lexer:
                 
             elif self.char == ')':
                 tokens.append(Token(Tk.OP, ')', self.pos))
+                self.next()
+                
+            elif self.char == '+':
+                tokens.append(Token(Tk.OP, '+', self.pos))
+                self.next()
+                
+            elif self.char == '-':
+                tokens.append(Token(Tk.OP, '-', self.pos))
+                self.next()
+                
+            elif self.char == '*':
+                tokens.append(Token(Tk.OP, '*', self.pos))
+                self.next()
+                
+            elif self.char == '/':
+                tokens.append(Token(Tk.OP, '/', self.pos))
+                self.next()
+                
+            elif self.char == '%':
+                tokens.append(Token(Tk.OP, '%', self.pos))
+                self.next()
+                
+            elif self.char == '>':
+                tokens.append(Token(Tk.OP, '>', self.pos))
+                self.next()
+                
+            elif self.char == '<':
+                tokens.append(Token(Tk.OP, '<', self.pos))
                 self.next()
             
             else:
@@ -365,7 +414,7 @@ class Parser:
     
     def binary_op(self, ops: List[Tuple[str]], function: Callable):
         left, error = function()
-        if self.token.full in ops:
+        while self.token.full in ops:
             op_token = self.token
             self.next()
             right, error = function()
@@ -373,7 +422,7 @@ class Parser:
         return left, error
 
     def unary_op(self, ops: List[Tuple[str]], function: Callable):
-        if self.token.full in ops:
+        while self.token.full in ops:
             op_token = self.token
             self.next()
             right, error = function()
@@ -420,17 +469,19 @@ class Parser:
         return function()
             
     def expr(self):
-        return self.conditional_op([(Tk.KW, 'while'), (Tk.KW, 'if')],
-            lambda: self.unary_op([(Tk.KW, 'out')], 
-                lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->'), (Tk.OP, '<->')], 
-                    lambda: self.binary_op([(Tk.OP, ':')],
-                        lambda: self.unary_op([(Tk.KW, 'in')],
-                            self.factor
-                        )
-                    )
-                )
-            )
-        )
+        return  self.conditional_op([(Tk.KW, 'while'), (Tk.KW, 'if')],
+        lambda: self.unary_op([(Tk.KW, 'out')], 
+        lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->'), (Tk.OP, '<->')], 
+        lambda: self.binary_op([(Tk.KW, 'or')],
+        lambda: self.binary_op([(Tk.KW, 'and')],
+        lambda: self.unary_op([(Tk.KW, 'not')],
+        lambda: self.binary_op([(Tk.OP, '=='), (Tk.OP, '!='), (Tk.OP, '>'), (Tk.OP, '<'), (Tk.OP, '>='), (Tk.OP, '<=')],
+        lambda: self.binary_op([(Tk.OP, '+'), (Tk.OP, '-')],
+        lambda: self.binary_op([(Tk.OP, '*'), (Tk.OP, '/'), (Tk.OP, '%')],
+        lambda: self.binary_op([(Tk.OP, ':')],
+        lambda: self.unary_op([(Tk.KW, 'in')],
+                self.factor
+        )))))))))))
             
     def factor(self) -> ValueNode:
         token = self.token
@@ -535,6 +586,31 @@ class MemoryUsageList(InfiniteList):
         self.use(array_found)
         return array_found
 
+def bf_parse(bf: str, mapping: dict):
+    def repl(id_str):
+        if callable(mapping[id_str]):
+            return mapping[id_str]()
+        total = ''
+        for child in mapping[id_str]:
+            total += child()
+        return total
+
+    i = 0
+    while i < len(bf):
+        character = bf[i]
+        if character in LETTERS + DIGITS + '_':
+            id_str = ''
+            while id_str not in mapping.keys() and i < len(bf):
+                character = bf[i]
+                id_str += character
+                i += 1
+            repl_str = repl(id_str)
+            bf = bf.replace(id_str, repl_str, 1)
+            i += len(repl_str) - len(id_str)
+        else:
+            i += 1
+    return bf
+
 class Compiler:
     def __init__(self, mainnode) -> None:
         self.mainnode = mainnode
@@ -564,23 +640,17 @@ class Compiler:
             if node.token.full in [(Tk.KW, 'if'), (Tk.KW, 'elif')]:
                 temp0 = self.memoryusage.find_use_cell()
                 temp1 = self.memoryusage.find_use_cell()
-                result = self.cmd_move(temp0) + '[-]+'
-                result += self.cmd_move(temp1) + '[-]'
-                result += self.visit(node.condition) + '['
-                for child in node.body:
-                    result += self.visit(child)
-                result += self.cmd_move(temp0) + '-'
-                result += self.visit(node.condition) + '['
-                result += self.cmd_move(temp1) + '+'
-                result += self.visit(node.condition) + '-]]'
-                result += self.cmd_move(temp1) + '['
-                result += self.visit(node.condition) + '+'
-                result += self.cmd_move(temp1) + '-]'
-                result += self.cmd_move(temp0) + '['
-                for child in node.elsebody:
-                    result += self.visit(child)
-                result += self.cmd_move(temp0) + '-]'
-                result += self.visit(node.condition)
+                
+                result = bf_parse('t0[-]+t1[-]x[b0t0-x[t1+x-]]t1[x+t1-]t0[b1t0-]x',
+                    {
+                        't0': lambda: self.cmd_move(temp0),
+                        't1': lambda: self.cmd_move(temp1),
+                        'x': lambda: self.visit(node.condition),
+                        'b0': [lambda: self.visit(child) for child in node.body],
+                        'b1': [lambda: self.visit(child) for child in node.elsebody],
+                    }
+                )
+                
                 self.memoryusage.rmv(temp0)
                 self.memoryusage.rmv(temp1)
                 return result
@@ -588,65 +658,85 @@ class Compiler:
         if type(node) == BinaryOpNode:
             if node.token.full == (Tk.OP, '='):
                 temp0 = self.memoryusage.find_use_cell()
-                result = self.cmd_move(temp0) + '[-]'
-                result += self.visit(node.left) + '[-]'
-                result += self.visit(node.right) + '['
-                result += self.visit(node.left) + '+'
-                result += self.cmd_move(temp0) + '+'
-                result += self.visit(node.right) + '-]'
-                result += self.cmd_move(temp0) + '['
-                result += self.visit(node.right) + '+'
-                result += self.cmd_move(temp0) + '-]'
-                result += self.visit(node.left)
+                
+                result = self.visit(node.left)
+                left = self.pointer
+                result += self.visit(node.right)
+                right = self.pointer
+                
+                result += bf_parse('t0[-]x[-]y[x+t0+y-]t0[y+t0-]x',
+                    {
+                        't0': lambda: self.cmd_move(temp0),
+                        'x': lambda: self.cmd_move(left),
+                        'y': lambda: self.cmd_move(right),
+                    }
+                )
+                
                 self.memoryusage.rmv(temp0)
                 return result
                     
             if node.token.full == (Tk.OP, '+='):
                 temp0 = self.memoryusage.find_use_cell()
-                result = self.cmd_move(temp0) + '[-]'
-                result += self.visit(node.right) + '['
-                result += self.visit(node.left) + '+'
-                result += self.cmd_move(temp0) + '+'
-                result += self.visit(node.right) + '-]'
-                result += self.cmd_move(temp0) + '['
-                result += self.visit(node.right) + '+'
-                result += self.cmd_move(temp0) + '-]'
+                
+                result = self.visit(node.left)
+                left = self.pointer
+                result += self.visit(node.right)
+                right = self.pointer
+                
+                result += bf_parse('t0[-]y[x+t0+y-]t0[y+t0-]x',
+                    {
+                        't0': lambda: self.cmd_move(temp0),
+                        'x': lambda: self.cmd_move(left),
+                        'y': lambda: self.cmd_move(right),
+                    }
+                )
+                
                 self.memoryusage.rmv(temp0)
                 return result
                     
             if node.token.full == (Tk.OP, '-='):
                 temp0 = self.memoryusage.find_use_cell()
-                result = self.cmd_move(temp0) + '[-]'
-                result += self.visit(node.right) + '['
-                result += self.visit(node.left) + '-'
-                result += self.cmd_move(temp0) + '+'
-                result += self.visit(node.right) + '-]'
-                result += self.cmd_move(temp0) + '['
-                result += self.visit(node.right) + '+'
-                result += self.cmd_move(temp0) + '-]'
+                
+                result = self.visit(node.left)
+                left = self.pointer
+                result += self.visit(node.right)
+                right = self.pointer
+                
+                result += bf_parse('t0[-]y[x-t0+y-]t0[y+t0-]x',
+                    {
+                        't0': lambda: self.cmd_move(temp0),
+                        'x': lambda: self.visit(node.left),
+                        'y': lambda: self.visit(node.right),
+                    }
+                )
+                
                 self.memoryusage.rmv(temp0)
                 return result
 
             if node.token.full == (Tk.OP, '->'):
-                result = self.visit(node.right) + '[-]'
-                result += self.visit(node.left) + '['
-                result += self.visit(node.right) + '+'
-                result += self.visit(node.left) + '-]'
-                result += self.visit(node.right)
+                result = bf_parse('y[-]x[y+x-]y',
+                    {
+                        'x': lambda: self.visit(node.left),
+                        'y': lambda: self.visit(node.right)
+                    }
+                )
+                
                 return result
             
             if node.token.full == (Tk.OP, '<->'):
                 temp0 = self.memoryusage.find_use_cell()
-                result = self.cmd_move(temp0) + '[-]'
-                result += self.visit(node.left) + '['
-                result += self.cmd_move(temp0) + '+'
-                result += self.visit(node.left) + '-]'
-                result += self.visit(node.right) + '['
-                result += self.visit(node.left) + '+'
-                result += self.visit(node.right) + '-]'
-                result += self.cmd_move(temp0) + '['
-                result += self.visit(node.right) + '+'
-                result += self.cmd_move(temp0) + '-]'
+                
+                result = bf_parse('t0[-]x[t0+x-]y[x+y-]t0[y+t0-]x',
+                    {
+                        't0': lambda: self.cmd_move(temp0),
+                        'x': lambda: self.visit(node.left),
+                        'y': lambda: self.visit(node.right),
+                    }
+                )
+                
+                self.memoryusage.rmv(temp0)
+                return result
+            
                 self.memoryusage.rmv(temp0)
                 return result
                 
@@ -680,10 +770,7 @@ class Compiler:
             return self.cmd_move(self.aliases[node.title])
         
         if type(node) == LiteralNode:
-            if node.value in self.literals:
-                return self.cmd_move(self.literals[node.value])
             cell_found = self.memoryusage.find_use_cell()
-            self.literals[node.value] = cell_found
             return self.cmd_move(cell_found) + self.cmd_set(node.value)
                 
     # Instructions
