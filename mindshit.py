@@ -1,7 +1,10 @@
 # Imports
+import json
+import sys
 from typing import Callable, TypeVar, Union, List, Tuple
 
 Self = TypeVar('Self')
+Node = TypeVar('Node')
 
 # Constants
 DIGITS = '0123456789'
@@ -32,7 +35,7 @@ class Position:
 
 # Error
 class Error:
-    def __init__(self, name: str, info: str, start: Position, end: Position = None):
+    def __init__(self, name: str, info: str, start: Position, end: Position = None) -> None:
         self.name = name
         self.info = info
         self.start = start
@@ -119,8 +122,8 @@ class Tk:
         'not',
         
         # IO
-        'out',
-        'in',
+        'print',
+        'input',
     ]
 
 class Token:
@@ -141,9 +144,13 @@ class Token:
     
     def __repr__(self) -> str:
         if self.value != None:
-            return '{' + f'{self.type}: {self.value}' + '}'
-
-        return '{' + self.type + '}'
+            return f'[{self.type}: {self.value}]'
+        return f'[{self.type}]'
+    
+    def reprJSON(self) -> dict:
+        if self.value != None:
+            return dict(type=self.type, value=self.value)
+        return dict(type=self.type)
 
 class Lexer:
     def __init__(self, file_name: str, text: str) -> None:
@@ -336,41 +343,39 @@ class LiteralNode:
     def __init__(self, value: int) -> None:
         self.value = value
     
-    def __repr__(self) -> str:
-        return str(self.__dict__)
+    def reprJSON(self) -> str:
+        return dict(value=self.value)
 
 class AddressNode:
     def __init__(self, address: int) -> None:
         self.address = address
     
-    def __repr__(self) -> str:
-        return str(self.__dict__)
-
-ValueNode = Union[LiteralNode, AddressNode]
+    def reprJSON(self) -> str:
+        return dict(address=self.address)
 
 class IdentifierNode:
-    def __init__(self, title) -> None:
+    def __init__(self, title: str) -> None:
         self.title = title
     
-    def __repr__(self) -> str:
-        return str(self.__dict__)
+    def reprJSON(self) -> str:
+        return dict(title=self.title)
 
 class BinaryOpNode:
-    def __init__(self, left, token, right) -> None:
+    def __init__(self, left: Node, token, right) -> None:
         self.left = left
         self.token = token
         self.right = right
     
-    def __repr__(self) -> str:
-        return str(vars(self))
+    def reprJSON(self) -> str:
+        return dict(token=self.token, left=self.left, right=self.right)
 
 class UnaryOpNode:
     def __init__(self, token, right) -> None:
         self.token = token
         self.right = right
     
-    def __repr__(self) -> str:
-        return str(vars(self))
+    def reprJSON(self) -> str:
+        return dict(token=self.token, right=self.right)
 
 class ConditionalNode:
     def __init__(self, token, condition, body, elsebody = []) -> None:
@@ -379,22 +384,23 @@ class ConditionalNode:
         self.body = body
         self.elsebody = elsebody
     
-    def __repr__(self) -> str:
-        return str(self.__dict__)
+    def reprJSON(self) -> str:
+        return dict(token=self.token, condition=self.condition, body=self.body, elsebody=self.elsebody)
 
 class MainNode:
-    def __init__(self, body) -> None:
+    def __init__(self, name, body) -> None:
+        self.name = name
         self.body = body
     
-    def __repr__(self) -> str:
-        return str(self.__dict__)
+    def reprJSON(self) -> str:
+        return dict(name=self.name, body=self.body)
 
 class Parser:
-    def __init__(self, tokens: List[Token]) -> None:
+    def __init__(self, file_name, tokens: List[Token]) -> None:
         self.tokens = tokens
         self.index = -1
         
-        self.location = [MainNode([])]
+        self.location = [MainNode(file_name, [])]
         
         self.next()
     
@@ -411,8 +417,16 @@ class Parser:
             self.location[-1].body.append(expr)
         
         return self.location[-1], None
+
+    def unary_op(self, ops: List[Tuple[str]], function: Callable) -> UnaryOpNode:
+        while self.token.full in ops:
+            op_token = self.token
+            self.next()
+            right, error = function()
+            return UnaryOpNode(op_token, right), error
+        return function()
     
-    def binary_op(self, ops: List[Tuple[str]], function: Callable):
+    def binary_op(self, ops: List[Tuple[str]], function: Callable) -> Union[BinaryOpNode, UnaryOpNode]:
         left, error = function()
         while self.token.full in ops:
             op_token = self.token
@@ -421,15 +435,7 @@ class Parser:
             left = BinaryOpNode(left, op_token, right)
         return left, error
 
-    def unary_op(self, ops: List[Tuple[str]], function: Callable):
-        while self.token.full in ops:
-            op_token = self.token
-            self.next()
-            right, error = function()
-            return UnaryOpNode(op_token, right), error
-        return function()
-
-    def conditional_op(self, ops: List[Tuple[str]], function: Callable):
+    def conditional_op(self, ops: List[Tuple[str]], function: Callable) -> Union[ConditionalNode, BinaryOpNode, UnaryOpNode]:
         if self.token.full in ops:
             op_token = self.token
             self.next()
@@ -468,9 +474,9 @@ class Parser:
             return blocknode, error
         return function()
             
-    def expr(self):
+    def expr(self) -> Union[ConditionalNode, BinaryOpNode, UnaryOpNode]:
         return  self.conditional_op([(Tk.KW, 'while'), (Tk.KW, 'if')],
-        lambda: self.unary_op([(Tk.KW, 'out')], 
+        lambda: self.unary_op([(Tk.KW, 'print')], 
         lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->'), (Tk.OP, '<->')], 
         lambda: self.binary_op([(Tk.KW, 'or')],
         lambda: self.binary_op([(Tk.KW, 'and')],
@@ -479,11 +485,11 @@ class Parser:
         lambda: self.binary_op([(Tk.OP, '+'), (Tk.OP, '-')],
         lambda: self.binary_op([(Tk.OP, '*'), (Tk.OP, '/'), (Tk.OP, '%')],
         lambda: self.binary_op([(Tk.OP, ':')],
-        lambda: self.unary_op([(Tk.KW, 'in')],
+        lambda: self.unary_op([(Tk.KW, 'input')],
                 self.factor
         )))))))))))
             
-    def factor(self) -> ValueNode:
+    def factor(self) -> Node:
         token = self.token
         self.next()
         
@@ -643,8 +649,8 @@ class Compiler:
                 
                 result = bf_parse('t0[-]+t1[-]x[b0t0-x[t1+x-]]t1[x+t1-]t0[b1t0-]x',
                     {
-                        't0': lambda: self.cmd_move(temp0),
-                        't1': lambda: self.cmd_move(temp1),
+                        't0': lambda: self.move(temp0),
+                        't1': lambda: self.move(temp1),
                         'x': lambda: self.visit(node.condition),
                         'b0': [lambda: self.visit(child) for child in node.body],
                         'b1': [lambda: self.visit(child) for child in node.elsebody],
@@ -666,9 +672,9 @@ class Compiler:
                 
                 result += bf_parse('t0[-]x[-]y[x+t0+y-]t0[y+t0-]x',
                     {
-                        't0': lambda: self.cmd_move(temp0),
-                        'x': lambda: self.cmd_move(left),
-                        'y': lambda: self.cmd_move(right),
+                        't0': lambda: self.move(temp0),
+                        'x': lambda: self.move(left),
+                        'y': lambda: self.move(right),
                     }
                 )
                 
@@ -685,9 +691,9 @@ class Compiler:
                 
                 result += bf_parse('t0[-]y[x+t0+y-]t0[y+t0-]x',
                     {
-                        't0': lambda: self.cmd_move(temp0),
-                        'x': lambda: self.cmd_move(left),
-                        'y': lambda: self.cmd_move(right),
+                        't0': lambda: self.move(temp0),
+                        'x': lambda: self.move(left),
+                        'y': lambda: self.move(right),
                     }
                 )
                 
@@ -704,7 +710,7 @@ class Compiler:
                 
                 result += bf_parse('t0[-]y[x-t0+y-]t0[y+t0-]x',
                     {
-                        't0': lambda: self.cmd_move(temp0),
+                        't0': lambda: self.move(temp0),
                         'x': lambda: self.visit(node.left),
                         'y': lambda: self.visit(node.right),
                     }
@@ -728,7 +734,7 @@ class Compiler:
                 
                 result = bf_parse('t0[-]x[t0+x-]y[x+y-]t0[y+t0-]x',
                     {
-                        't0': lambda: self.cmd_move(temp0),
+                        't0': lambda: self.move(temp0),
                         'x': lambda: self.visit(node.left),
                         'y': lambda: self.visit(node.right),
                     }
@@ -748,10 +754,10 @@ class Compiler:
                 
                 result += bf_parse('t0[-]x[t1+t0+x-]t0[x+t0-]t0[-]y[t1+t0+y-]t0[y+t0-]t1',
                     {
-                        't0': lambda: self.cmd_move(temp0),
-                        't1': lambda: self.cmd_move(temp1),
-                        'x': lambda: self.cmd_move(left),
-                        'y': lambda: self.cmd_move(right),
+                        't0': lambda: self.move(temp0),
+                        't1': lambda: self.move(temp1),
+                        'x': lambda: self.move(left),
+                        'y': lambda: self.move(right),
                     }
                 )
                 
@@ -769,10 +775,10 @@ class Compiler:
                 
                 result += bf_parse('t0[-]x[t1+t0+x-]t0[x+t0-]t0[-]y[t1-t0+y-]t0[y+t0-]t1',
                     {
-                        't0': lambda: self.cmd_move(temp0),
-                        't1': lambda: self.cmd_move(temp1),
-                        'x': lambda: self.cmd_move(left),
-                        'y': lambda: self.cmd_move(right),
+                        't0': lambda: self.move(temp0),
+                        't1': lambda: self.move(temp1),
+                        'x': lambda: self.move(left),
+                        'y': lambda: self.move(right),
                     }
                 )
                 
@@ -790,31 +796,31 @@ class Compiler:
             raise RuntimeError('binary operator not defined in compiler')
         
         if type(node) == UnaryOpNode:
-            if node.token.full == (Tk.KW, 'out'):
-                return self.visit(node.right) + self.cmd_output()
+            if node.token.full == (Tk.KW, 'print'):
+                return self.visit(node.right) + self.output()
             
-            if node.token.full == (Tk.KW, 'in'):
-                return self.visit(node.right) + self.cmd_input()
+            if node.token.full == (Tk.KW, 'input'):
+                return self.visit(node.right) + self.input()
             
             raise RuntimeError('unary operator not defined in compiler')
         
         if type(node) == AddressNode:
-            return self.cmd_move(node.address)
+            return self.move(node.address)
         
         if type(node) == IdentifierNode:
             if node.title in self.aliases:
-                return self.cmd_move(self.aliases[node.title])
+                return self.move(self.aliases[node.title])
             cell_found = self.memoryusage.find_use_cell()
             self.aliases[node.title] = cell_found
-            return self.cmd_move(self.aliases[node.title])
+            return self.move(self.aliases[node.title])
         
         if type(node) == LiteralNode:
             cell_found = self.memoryusage.find_use_cell()
-            return self.cmd_move(cell_found) + self.cmd_set(node.value)
+            return self.move(cell_found) + self.assign(node.value)
                 
     # Instructions
     
-    def cmd_move(self, address_target: int) -> str:
+    def move(self, address_target: int) -> str:
         pointer = self.pointer
         self.pointer = address_target
         
@@ -822,27 +828,27 @@ class Compiler:
             return '>' * (address_target - pointer)
         return '<' * (pointer - address_target)
     
-    def cmd_set(self, value_target: int) -> str:
+    def assign(self, value_target: int) -> str:
         return '[-]' + '+' * value_target
 
-    def cmd_right(self, address_increment: int) -> str:
+    def right(self, address_increment: int) -> str:
         self.pointer += address_increment if address_increment != None else 1
         return '>' * address_increment
 
-    def cmd_left(self, address_decrement: int) -> str:
+    def left(self, address_decrement: int) -> str:
         self.pointer -= address_decrement if address_decrement != None else 1
         return '<' * address_decrement
 
-    def cmd_add(self, value_increment: int) -> str:
+    def add(self, value_increment: int) -> str:
         return '+' * value_increment if value_increment != None else 1
 
-    def cmd_sub(self, value_decrement: int) -> str:
+    def sub(self, value_decrement: int) -> str:
         return '-' * value_decrement if value_decrement != None else 1
 
-    def cmd_output(self, output_address: int = None) -> str:
+    def output(self, output_address: int = None) -> str:
         return self.move_append(output_address, '.')
 
-    def cmd_input(self, input_address: int = None) -> str:
+    def input(self, input_address: int = None) -> str:
         return self.move_append(input_address, ',')
 
     def move_append(self, address: int, symbol: str) -> str:
@@ -856,30 +862,46 @@ class Compiler:
                 return '<' * (pointer - address) + symbol
         return symbol
 
+def ComplexEncoder(object: Node) -> Union[dict, str]:
+    if hasattr(object, 'reprJSON'):
+        return object.reprJSON()
+    else:
+        return repr(object)
+
 def run(filename: str, filetext: str, debug: bool = False):
     lexer = Lexer(filename, filetext)
     tokens, error = lexer.lex()
     
     if error: return None, error
-
-    if debug: print(tokens)
+    
+    if debug:
+        with open('debug/tokens.txt', 'w') as tokens_txt:
+            tokens_txt.write('\n'.join(repr(token) for token in tokens))
         
-    parser = Parser(tokens)
-    ast, error = parser.parse()
+    parser = Parser(filename, tokens)
+    parsetree, error = parser.parse()
     
     if error: return None, error
+    
+    if debug:
+        with open('debug/parsetree.json', 'w') as parsetree_json:
+            json.dump(parsetree, parsetree_json, default=ComplexEncoder, indent=4)
 
-    compiler = Compiler(ast)
+    compiler = Compiler(parsetree)
     bf = compiler.compile()
     
-    if debug: print(bf)
+    if debug:
+        with open('debug/compiled.bf', 'w') as compiled_bf:
+            compiled_bf.write('\n'.join(bf[i:i+64] for i in range(0, len(bf), 64)))
 
     return bf, None
 
 if __name__ == '__main__':
-    file_name = 'main.ms'
+    if len(sys.argv) > 1: file_name = sys.argv[1]
+    else: file_name = 'debug/main.ms'
+    
     with open(file_name, 'r') as file:
-        bf, error = run(file_name, file.read(), debug = False)
+        bf, error = run(file_name, file.read(), debug = True)
     if error:
         print(error)
     else:
