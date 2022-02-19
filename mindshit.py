@@ -737,6 +737,45 @@ class Compiler:
                 self.memoryusage.rmv(temp0)
                 return result
             
+            if node.token.full == (Tk.OP, '+'):
+                temp0 = self.memoryusage.find_use_cell()
+                temp1 = self.memoryusage.find_use_cell()
+                
+                result = self.visit(node.left)
+                left = self.pointer
+                result += self.visit(node.right)
+                right = self.pointer
+                
+                result += bf_parse('t0[-]x[t1+t0+x-]t0[x+t0-]t0[-]y[t1+t0+y-]t0[y+t0-]t1',
+                    {
+                        't0': lambda: self.cmd_move(temp0),
+                        't1': lambda: self.cmd_move(temp1),
+                        'x': lambda: self.cmd_move(left),
+                        'y': lambda: self.cmd_move(right),
+                    }
+                )
+                
+                self.memoryusage.rmv(temp0)
+                return result
+            
+            if node.token.full == (Tk.OP, '-'):
+                temp0 = self.memoryusage.find_use_cell()
+                temp1 = self.memoryusage.find_use_cell()
+                
+                result = self.visit(node.left)
+                left = self.pointer
+                result += self.visit(node.right)
+                right = self.pointer
+                
+                result += bf_parse('t0[-]x[t1+t0+x-]t0[x+t0-]t0[-]y[t1-t0+y-]t0[y+t0-]t1',
+                    {
+                        't0': lambda: self.cmd_move(temp0),
+                        't1': lambda: self.cmd_move(temp1),
+                        'x': lambda: self.cmd_move(left),
+                        'y': lambda: self.cmd_move(right),
+                    }
+                )
+                
                 self.memoryusage.rmv(temp0)
                 return result
                 
