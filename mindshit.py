@@ -205,10 +205,14 @@ class Lexer:
             elif self.chars(2) == '-=':
                 tokens.append(Token(Tk.OP, '-=', self.pos))
                 self.next(2)
+                
+            # TODO: implement operators other than addition and subtraction
 
             elif self.chars(2) == '->':
                 tokens.append(Token(Tk.OP, '->', self.pos))
                 self.next(2)
+                
+            # TODO: add functionality to comparison operators
                 
             elif self.chars(2) == '==':
                 tokens.append(Token(Tk.OP, '==', self.pos))
@@ -411,7 +415,9 @@ class Parser:
         self.token = self.tokens[self.index] if self.index < len(self.tokens) else None
         return self.token
            
+    # TODO: create parsing errors
     def parse(self) -> Tuple[DoNode, Error]:
+        # TODO: implement "include" for including tokens of another file
         while self.token.full != Tk.EOF:
             expr, error = self.expr()
             if error:
@@ -475,7 +481,13 @@ class Parser:
             
             return blocknode, error
         return function()
-            
+    
+    # TODO: implement switch/match block
+    
+    # TODO: implement inline functions and function calls
+    
+    # TODO: implement data structures
+    
     def expr(self) -> Union[ConditionalNode, BinaryOpNode, UnaryOpNode]:
         return  self.conditional_op([(Tk.KW, 'while'), (Tk.KW, 'if')],
         lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->'), (Tk.OP, '<->')], 
@@ -512,6 +524,7 @@ class Parser:
             self.next()
             return AddressNode(address_token.value), None
         
+        # TODO: move 'do' definition to somewhere with less priority
         if token.full == (Tk.KW, 'do'):
             donode = DoNode('do', [])
             while self.token.full not in [(Tk.EOF), (Tk.KW, 'end')]:
@@ -521,6 +534,8 @@ class Parser:
                 donode.body.append(expr)
             self.next()
             return donode, None
+        
+        # TODO: implement arrays with commas
 
         if token.full == (Tk.OP, '('):
             expr = self.expr()
@@ -612,6 +627,8 @@ class MemoryUsageList(InfiniteList):
         array_found = self.get_array(size)
         self.use(array_found)
         return array_found
+
+# TODO: create new InfiniteList for storing type casting (chars, ints, bools, voids)
 
 class Compiler:
     def __init__(self, mainnode) -> None:
@@ -789,6 +806,8 @@ class Compiler:
                 
                 self.memory.rmv(temp0)
                 return result
+            
+            # TODO: implement more operators
                 
             if node.token.full == (Tk.OP, ':'):
                 if type(node.left) == IdentifierNode:

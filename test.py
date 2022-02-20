@@ -22,6 +22,7 @@ class Test:
         print(f'✓ Test {self.count}: {self.file_name} passed')
 
 def main():
+    # TODO: split tests to be more accurate
     Test('assignment.ms', 'aac')
     Test('opassignment.ms', '053')
     Test('relocate.ms', 'aa')
