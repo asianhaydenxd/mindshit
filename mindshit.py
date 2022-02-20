@@ -634,27 +634,35 @@ class Compiler:
         
         if type(node) == ConditionalNode:
             if node.token.full == (Tk.KW, 'while'):
-                result += self.visit(node.condition) + '['
-                for child in node.body:
-                    result += self.visit(child)
-                result += self.visit(node.condition) + ']'
+                result += self.visit(node.condition)
+                condition = self.pointer
+                
+                result += self.bf_parse('x[b0x]r_b0',
+                    x  = condition,
+                    b0 = node.body,
+                )
+                
                 return result
             
             if node.token.full in [(Tk.KW, 'if'), (Tk.KW, 'elif')]:
                 result = self.visit(node.condition)
                 condition = self.pointer
                 
-                temp0, temp1 = self.memory.allocate(2)
+                temp0, temp1, temp2, returned = self.memory.allocate(4)
                 
-                result += self.bf_parse('t0[-]+t1[-]x[b0t0-x[t1+x-]]t1[x+t1-]t0[b1t0-]x',
+                result += self.bf_parse('t0[-]+t1[-]x[b0t2[-]rv[-]r_b0[rv+t2+r_b0-]t2[r_b0+t2-]t0-x[t1+x-]]t1[x+t1-]t0[b1t2[-]rv[-]r_b1[rv+t2+r_b1-]t2[r_b1+t2-]t0-]rv',
+                    #                                   \=====================================/                          \=====================================/
+                    #                                       Set return value to if's return                                 Set return value to else's return
                     t0 = temp0,
                     t1 = temp1,
+                    t2 = temp2,
                     x  = condition,
                     b0 = node.body,
                     b1 = node.elsebody,
+                    rv = returned,
                 )
                 
-                self.memory.rmv(temp0, temp1)
+                self.memory.rmv(temp0, temp1, temp2)
                 return result
         
         if type(node) == BinaryOpNode:
@@ -820,8 +828,11 @@ class Compiler:
             if type(mapping[id_str]) == int:
                 return self.move(mapping[id_str])
             total = ''
+            returned = 0
             for child in mapping[id_str]:
                 total += self.visit(child)
+                returned = self.pointer
+            mapping['r_'+id_str] = returned
             return total
 
         i = 0
