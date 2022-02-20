@@ -660,10 +660,10 @@ class Compiler:
                 return result
             
             if node.token.full in [(Tk.KW, 'if'), (Tk.KW, 'elif')]:
-                result = self.visit(node.condition)
-                condition = self.pointer
-                
                 temp0, temp1, temp2, returned = self.memory.allocate(4)
+                
+                result += self.visit(node.condition)
+                condition = self.pointer
                 
                 result += self.bf_parse('t0[-]+t1[-]x[b0t2[-]rv[-]r_b0[rv+t2+r_b0-]t2[r_b0+t2-]t0-x[t1+x-]]t1[x+t1-]t0[b1t2[-]rv[-]r_b1[rv+t2+r_b1-]t2[r_b1+t2-]t0-]rv',
                     #                                   \=====================================/                          \=====================================/
@@ -684,7 +684,7 @@ class Compiler:
             if node.token.full == (Tk.OP, '='):
                 temp0 = self.memory.allocate()
                 
-                result = self.visit(node.left)
+                result += self.visit(node.left)
                 left = self.pointer
                 
                 result += self.visit(node.right)
@@ -702,7 +702,7 @@ class Compiler:
             if node.token.full == (Tk.OP, '+='):
                 temp0 = self.memory.allocate()
                 
-                result = self.visit(node.left)
+                result += self.visit(node.left)
                 left = self.pointer
                 
                 result += self.visit(node.right)
@@ -720,7 +720,7 @@ class Compiler:
             if node.token.full == (Tk.OP, '-='):
                 temp0 = self.memory.allocate()
                 
-                result = self.visit(node.left)
+                result += self.visit(node.left)
                 left = self.pointer
                 
                 result += self.visit(node.right)
@@ -736,7 +736,7 @@ class Compiler:
                 return result
 
             if node.token.full == (Tk.OP, '->'):
-                result = self.visit(node.left)
+                result += self.visit(node.left)
                 left = self.pointer
                 
                 result += self.visit(node.right)
@@ -752,7 +752,7 @@ class Compiler:
             if node.token.full == (Tk.OP, '<->'):
                 temp0 = self.memory.allocate()
                 
-                result = self.visit(node.left)
+                result += self.visit(node.left)
                 left = self.pointer
                 
                 result += self.visit(node.right)
@@ -770,7 +770,7 @@ class Compiler:
             if node.token.full == (Tk.OP, '+'):
                 temp0, returned = self.memory.allocate(2)
                 
-                result = self.visit(node.left)
+                result += self.visit(node.left)
                 left = self.pointer
                 
                 result += self.visit(node.right)
@@ -778,7 +778,7 @@ class Compiler:
                 
                 result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t0[-]y[r+t0+y-]t0[y+t0-]r',
                     t0 = temp0,
-                    r = returned,
+                    r  = returned,
                     x  = left,
                     y  = right,
                 )
@@ -787,7 +787,7 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '-'):
-                temp0, temp1 = self.memory.allocate(2)
+                temp0, returned = self.memory.allocate(2)
                 
                 result = self.visit(node.left)
                 left = self.pointer
@@ -797,7 +797,7 @@ class Compiler:
                 
                 result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t0[-]y[r-t0+y-]t0[y+t0-]r',
                     t0 = temp0,
-                    r = temp1,
+                    r  = returned,
                     x  = left,
                     y  = right,
                 )
