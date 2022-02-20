@@ -212,8 +212,6 @@ class Lexer:
                 tokens.append(Token(Tk.OP, '->', self.pos))
                 self.next(2)
                 
-            # TODO: add functionality to comparison operators
-                
             elif self.chars(2) == '==':
                 tokens.append(Token(Tk.OP, '==', self.pos))
                 self.next(2)
@@ -808,6 +806,28 @@ class Compiler:
                 return result
             
             # TODO: implement more operators
+            
+            if node.token.full == (Tk.OP, '=='):
+                temp0, temp1, returned = self.memory.allocate(3)
+                
+                result += self.visit(node.left)
+                left = self.pointer
+                
+                result += self.visit(node.right)
+                right = self.pointer
+                
+                result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]rt1[-]r[t1+r-]+y[t1-t0+y-]t0[y+t0-]t1[r-t1[-]]r',
+                    t0 = temp0,
+                    t1 = temp1,
+                    r  = returned,
+                    x  = left,
+                    y  = right,
+                )
+                
+                self.memory.rmv(temp0, temp1)
+                return result
+            
+            # TODO: implement more comparison operators
                 
             if node.token.full == (Tk.OP, ':'):
                 if type(node.left) == IdentifierNode:
