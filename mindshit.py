@@ -112,6 +112,8 @@ class Tk:
         'elif',
         'else',
         
+        'do',
+        
         # Boolean literals
         'true',
         'false',
@@ -387,7 +389,7 @@ class ConditionalNode:
     def reprJSON(self) -> str:
         return dict(token=self.token, condition=self.condition, body=self.body, elsebody=self.elsebody)
 
-class MainNode:
+class DoNode:
     def __init__(self, name, body) -> None:
         self.name = name
         self.body = body
@@ -400,7 +402,7 @@ class Parser:
         self.tokens = tokens
         self.index = -1
         
-        self.location = [MainNode(file_name, [])]
+        self.location = [DoNode(file_name, [])]
         
         self.next()
     
@@ -409,7 +411,7 @@ class Parser:
         self.token = self.tokens[self.index] if self.index < len(self.tokens) else None
         return self.token
            
-    def parse(self) -> Tuple[MainNode, Error]:
+    def parse(self) -> Tuple[DoNode, Error]:
         while self.token.full != Tk.EOF:
             expr, error = self.expr()
             if error:
@@ -476,7 +478,6 @@ class Parser:
             
     def expr(self) -> Union[ConditionalNode, BinaryOpNode, UnaryOpNode]:
         return  self.conditional_op([(Tk.KW, 'while'), (Tk.KW, 'if')],
-        lambda: self.unary_op([(Tk.KW, 'print')], 
         lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->'), (Tk.OP, '<->')], 
         lambda: self.binary_op([(Tk.KW, 'or')],
         lambda: self.binary_op([(Tk.KW, 'and')],
@@ -486,6 +487,7 @@ class Parser:
         lambda: self.binary_op([(Tk.OP, '*'), (Tk.OP, '/'), (Tk.OP, '%')],
         lambda: self.binary_op([(Tk.OP, ':')],
         lambda: self.unary_op([(Tk.KW, 'input')],
+        lambda: self.unary_op([(Tk.KW, 'print')], 
                 self.factor
         )))))))))))
             
@@ -509,6 +511,16 @@ class Parser:
             address_token = self.token
             self.next()
             return AddressNode(address_token.value), None
+        
+        if token.full == (Tk.KW, 'do'):
+            donode = DoNode('do', [])
+            while self.token.full not in [(Tk.EOF), (Tk.KW, 'end')]:
+                expr, error = self.expr()
+                if error:
+                    return None, error
+                donode.body.append(expr)
+            self.next()
+            return donode, None
 
         if token.full == (Tk.OP, '('):
             expr = self.expr()
@@ -615,7 +627,7 @@ class Compiler:
     def visit(self, node) -> None:
         result = ''
         
-        if type(node) == MainNode:
+        if type(node) == DoNode:
             for child in node.body:
                 result += self.visit(child)
             return result
