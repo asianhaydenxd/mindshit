@@ -866,6 +866,21 @@ class Compiler:
             if node.token.full == (Tk.KW, 'input'):
                 return self.visit(node.right) + self.input()
             
+            if node.token.full == (Tk.KW, 'not'):
+                temp0, returned = self.memory.allocate(2)
+                
+                result += self.visit(node.right)
+                right = self.pointer
+                
+                result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]r-[t0-r-]t0[r+t0-]r',
+                    t0 = temp0,
+                    r  = returned,
+                    x  = right,
+                )
+                
+                self.memory.rmv(temp0)
+                return result
+            
             raise RuntimeError('unary operator not defined in compiler')
         
         if type(node) == AddressNode:
