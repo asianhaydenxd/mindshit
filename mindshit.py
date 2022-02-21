@@ -649,14 +649,15 @@ class Compiler:
         
         if type(node) == ConditionalNode:
             if node.token.full == (Tk.KW, 'while'):
-                result += self.visit(node.condition)
-                condition = self.pointer
+                temp0, temp1 = self.memory.allocate(2)
                 
                 result += self.bf_parse('x[b0x]r_b0',
-                    x  = condition,
+                    t0 = temp0,
+                    x  = [BinaryOpNode(AddressNode(temp1), Token(Tk.OP, '='), node.condition)],
                     b0 = node.body,
                 )
                 
+                self.memory.rmv(temp0, temp1)
                 return result
             
             if node.token.full in [(Tk.KW, 'if'), (Tk.KW, 'elif')]:
