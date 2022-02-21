@@ -592,23 +592,6 @@ class MemoryUsageList(InfiniteList):
         self[len(self.list)] = False
         return len(self.list) - 1
     
-    def get_array(self, size: int) -> int:
-        total_size = 0
-        start_index = None
-        for index, used in enumerate(self.list):
-            if not used:
-                total_size += 1
-            else:
-                total_size = 0
-                
-            if total_size == 1:
-                start_index = index
-                
-            if total_size == size:
-                return start_index
-        self[len(self.list)-1+size] = False
-        return len(self.list)-size
-    
     def allocate(self, count: int = 1) -> int:
         if count == 1:
             cell_found = self.get_cell()
@@ -620,11 +603,6 @@ class MemoryUsageList(InfiniteList):
             self.use(cell_found)
             cells.append(cell_found)
         return tuple(cells)
-    
-    def allocate_array(self, size: int) -> int:
-        array_found = self.get_array(size)
-        self.use(array_found)
-        return array_found
 
 # TODO: create new InfiniteList for storing type casting (chars, ints, bools, voids)
 
