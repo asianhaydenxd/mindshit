@@ -1003,7 +1003,7 @@ def run(filename: str, filetext: str, debug: bool = False):
 
     return bf, None
 
-if __name__ == '__main__':
+def main():
     if len(sys.argv) > 1: file_name = sys.argv[1]
     else: file_name = 'debug/main.ms'
     
@@ -1014,3 +1014,5 @@ if __name__ == '__main__':
     else:
         import brainfuck
         brainfuck.evaluate(bf)
+        
+if __name__ == '__main__': main()
