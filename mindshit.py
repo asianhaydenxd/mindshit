@@ -931,8 +931,8 @@ class Compiler:
         
         if type(node) == ArrayNode:
             array_address = self.memory.allocate_array(len(node.array))
-            for subnode in node.array:
-                result += self.visit(BinaryOpNode(AddressNode(array_address), Token(Tk.OP, '='), subnode))
+            for i, subnode in enumerate(node.array):
+                result += self.visit(BinaryOpNode(AddressNode(array_address + i), Token(Tk.OP, '='), subnode))
             result += self.move(array_address)
             return result
     
