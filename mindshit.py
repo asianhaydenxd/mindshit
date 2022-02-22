@@ -173,6 +173,11 @@ class Lexer:
     def lex(self) -> Tuple[List[Token], Error]:
         tokens = []
         
+        valid_tokens = ['<->', '//', '/*', '+=', '-=', '->', '==', '!=', '<=', '>=', '&', '=', ':', '(', ')', '[', ']', '+', '-', '*', '/', '%', '>', '<']
+        def parseToken(token: str, token_len: int):
+            tokens.append(Token(Tk.OP, token, self.pos))
+            self.next(token_len)
+        
         while self.char != None:
             if self.char in WHITESPACE:
                 self.next()
@@ -187,105 +192,15 @@ class Lexer:
                 token, error = self.make_char()
                 if error: return [], error
                 tokens.append(token)
-
-            elif self.chars(3) == '<->':
-                tokens.append(Token(Tk.OP, '<->', self.pos))
-                self.next(3)
-
-            elif self.chars(2) == '//':
-                self.skip_oneline_comment()
-                
-            elif self.chars(2) == '/*':
-                self.skip_multiline_comment()
-
-            elif self.chars(2) == '+=':
-                tokens.append(Token(Tk.OP, '+=', self.pos))
-                self.next(2)
-
-            elif self.chars(2) == '-=':
-                tokens.append(Token(Tk.OP, '-=', self.pos))
-                self.next(2)
-                
-            # TODO: implement operators other than addition and subtraction
-
-            elif self.chars(2) == '->':
-                tokens.append(Token(Tk.OP, '->', self.pos))
-                self.next(2)
-                
-            elif self.chars(2) == '==':
-                tokens.append(Token(Tk.OP, '==', self.pos))
-                self.next(2)
-                
-            elif self.chars(2) == '!=':
-                tokens.append(Token(Tk.OP, '!=', self.pos))
-                self.next(2)
-                
-            elif self.chars(2) == '>=':
-                tokens.append(Token(Tk.OP, '>=', self.pos))
-                self.next(2)
-                
-            elif self.chars(2) == '<=':
-                tokens.append(Token(Tk.OP, '<=', self.pos))
-                self.next(2)
-                
-            elif self.char == '&':
-                tokens.append(Token(Tk.OP, '&', self.pos))
-                self.next()
-            
-            elif self.char == '=':
-                tokens.append(Token(Tk.OP, '=', self.pos))
-                self.next()
-            
-            elif self.char == ':':
-                tokens.append(Token(Tk.OP, ':', self.pos))
-                self.next()
-            
-            elif self.char == '(':
-                tokens.append(Token(Tk.OP, '(', self.pos))
-                self.next()
-                
-            elif self.char == ')':
-                tokens.append(Token(Tk.OP, ')', self.pos))
-                self.next()
-            
-            elif self.char == '[':
-                tokens.append(Token(Tk.OP, '[', self.pos))
-                self.next()
-                
-            elif self.char == ']':
-                tokens.append(Token(Tk.OP, ']', self.pos))
-                self.next()
-                
-            elif self.char == '+':
-                tokens.append(Token(Tk.OP, '+', self.pos))
-                self.next()
-                
-            elif self.char == '-':
-                tokens.append(Token(Tk.OP, '-', self.pos))
-                self.next()
-                
-            elif self.char == '*':
-                tokens.append(Token(Tk.OP, '*', self.pos))
-                self.next()
-                
-            elif self.char == '/':
-                tokens.append(Token(Tk.OP, '/', self.pos))
-                self.next()
-                
-            elif self.char == '%':
-                tokens.append(Token(Tk.OP, '%', self.pos))
-                self.next()
-                
-            elif self.char == '>':
-                tokens.append(Token(Tk.OP, '>', self.pos))
-                self.next()
-                
-            elif self.char == '<':
-                tokens.append(Token(Tk.OP, '<', self.pos))
-                self.next()
             
             else:
-                return [], IllegalCharError(f"'{self.char}'", self.pos)
+                ok = False
+                for valid_token in valid_tokens:
+                    if self.chars(len(valid_token)) == valid_token:
+                        ok = True
+                        parseToken(valid_token, len(valid_token))
+                if not ok:
+                    return [], IllegalCharError(f"'{self.char}'", self.pos)
         
         tokens.append(Token(Tk.EOF, start=self.pos))
         
