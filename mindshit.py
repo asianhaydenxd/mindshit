@@ -247,6 +247,14 @@ class Lexer:
             elif self.char == ')':
                 tokens.append(Token(Tk.OP, ')', self.pos))
                 self.next()
+            
+            elif self.char == '[':
+                tokens.append(Token(Tk.OP, '[', self.pos))
+                self.next()
+                
+            elif self.char == ']':
+                tokens.append(Token(Tk.OP, ']', self.pos))
+                self.next()
                 
             elif self.char == '+':
                 tokens.append(Token(Tk.OP, '+', self.pos))
@@ -356,6 +364,14 @@ class AddressNode:
     
     def reprJSON(self) -> str:
         return dict(address=self.address)
+    
+class ArrayNode:
+    def __init__(self, array: List[AddressNode]):
+        self.array = array
+        self.index = 0
+        
+    def reprJSON(self) -> str:
+        return dict(array=self.array)
 
 class IdentifierNode:
     def __init__(self, title: str) -> None:
@@ -533,7 +549,13 @@ class Parser:
             self.next()
             return donode, None
         
-        # TODO: implement arrays with commas
+        if token.full == (Tk.OP, '['):
+            array = ArrayNode([])
+            while self.token.full not in [(Tk.EOF), (Tk.OP, ']')]:
+                element, error = self.expr()
+                array.array.append(element)
+            self.next()
+            return array, None
 
         if token.full == (Tk.OP, '('):
             expr = self.expr()
@@ -840,7 +862,14 @@ class Compiler:
         
         if type(node) == UnaryOpNode:
             if node.token.full == (Tk.KW, 'print'):
-                return self.visit(node.right) + self.output()
+                # FIXME: print arrays by going to the initial address and going through the consecutive cells
+                if type(node.right) == ArrayNode:
+                    nresult, ptr_array = self.visit(node.right)
+                    result += nresult
+                    for address in ptr_array:
+                        result += self.move(address)
+                        result += self.output()
+                return result
             
             if node.token.full == (Tk.KW, 'input'):
                 return self.visit(node.right) + self.input()
@@ -875,6 +904,15 @@ class Compiler:
         if type(node) == LiteralNode:
             cell_found = self.memory.allocate()
             return self.move(cell_found) + self.assign(node.value)
+        
+        # FIXME: allocate new memory space for array declarations
+        if type(node) == ArrayNode:
+            ptr_array = []
+            for subnode in node.array:
+                result += self.visit(subnode)
+                ptr_array.append(self.pointer)
+            result += self.move(ptr_array[0])
+            return result, ptr_array
     
     def bf_parse(self, bf: str, **mapping: Union[Callable, List[Callable]]):
         def repl(id_str):
