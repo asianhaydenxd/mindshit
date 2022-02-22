@@ -646,7 +646,8 @@ class MemoryUsageList(InfiniteList):
     
     def allocate_array(self, size: int) -> int:
         array_found = self.get_array(size)
-        self.use(array_found)
+        for i in range(size):
+            self.use(array_found + i)
         return array_found
 
 # TODO: create new InfiniteList for storing type casting (chars, ints, bools, voids)
