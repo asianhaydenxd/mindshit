@@ -23,7 +23,7 @@ def evaluate(code, returning: bool = False, default_input: str = ''):
     code = cleanup(list(code))
     bracemap = buildbracemap(code)
 
-    cells, codeptr, cellptr, inputchars = [0], 0, 0, list(default_input).reverse()
+    cells, codeptr, cellptr, inputchars = [0], 0, 0, list(default_input).reverse() if default_input else []
 
     while codeptr < len(code):
         command = code[codeptr]
