@@ -890,8 +890,8 @@ class Compiler:
                 if type(node.right) == ArrayNode:
                     result += self.visit(node.right)
                     for _ in range(len(node.right.array) + 1):
-                        result += self.right(1)
                         result += self.output()
+                        result += self.right(1)
                     return result
                 return self.visit(node.right) + self.output()
             
