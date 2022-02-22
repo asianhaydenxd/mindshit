@@ -1,4 +1,5 @@
 # Imports
+from operator import length_hint
 from typing import Callable, Iterable, TypeVar, Union, List, Tuple
 import json
 import sys
@@ -884,14 +885,14 @@ class Compiler:
         
         if type(node) == UnaryOpNode:
             if node.token.full == (Tk.KW, 'print'):
-                # FIXME: print arrays by going to the initial address and going through the consecutive cells
+                # FIXME: weird formatting, needs extensive testing
                 if type(node.right) == ArrayNode:
-                    nresult, ptr_array = self.visit(node.right)
-                    result += nresult
-                    for address in ptr_array:
-                        result += self.move(address)
+                    result += self.visit(node.right)
+                    for _ in range(len(node.right.array) + 1):
+                        result += self.right(1)
                         result += self.output()
-                return result
+                    return result
+                return self.visit(node.right) + self.output()
             
             if node.token.full == (Tk.KW, 'input'):
                 return self.visit(node.right) + self.input()
@@ -927,14 +928,12 @@ class Compiler:
             cell_found = self.memory.allocate()
             return self.move(cell_found) + self.assign(node.value)
         
-        # FIXME: allocate new memory space for array declarations
         if type(node) == ArrayNode:
-            ptr_array = []
+            array_address = self.memory.allocate_array(len(node.array))
             for subnode in node.array:
-                result += self.visit(subnode)
-                ptr_array.append(self.pointer)
-            result += self.move(ptr_array[0])
-            return result, ptr_array
+                result += self.visit(BinaryOpNode(AddressNode(array_address), Token(Tk.OP, '='), subnode))
+            result += self.move(array_address)
+            return result
     
     def bf_parse(self, bf: str, **mapping: Union[Callable, List[Callable]]):
         def repl(id_str):
