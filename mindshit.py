@@ -1,5 +1,4 @@
 # Imports
-from operator import length_hint
 from typing import Callable, Iterable, TypeVar, Union, List, Tuple
 import json
 import sys
