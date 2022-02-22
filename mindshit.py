@@ -527,6 +527,9 @@ class Parser:
         
         if token.type == Tk.CHAR:
             return LiteralNode(ord(token.value)), None
+        
+        if token.type == Tk.STR:
+            return ArrayNode([LiteralNode(ord(char)) for char in token.value]), None
 
         if token.full == (Tk.KW, 'true'):
             return LiteralNode(1), None
