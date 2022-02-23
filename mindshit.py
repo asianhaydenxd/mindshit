@@ -200,7 +200,7 @@ class Lexer:
             elif self.char in DIGITS:
                 tokens.append(self.make_number())
             
-            elif self.char in LETTERS:
+            elif self.char in LETTERS + '_':
                 tokens.append(self.make_text())
             
             elif self.char in ["'", '"']:
@@ -317,7 +317,7 @@ class IdentifierNode:
         return dict(title=self.title)
 
 class BinaryOpNode:
-    def __init__(self, left: Node, token, right) -> None:
+    def __init__(self, left: Node, token: Token, right: Node) -> None:
         self.left = left
         self.token = token
         self.right = right
@@ -326,7 +326,7 @@ class BinaryOpNode:
         return dict(token=self.token, left=self.left, right=self.right)
 
 class UnaryOpNode:
-    def __init__(self, token, right) -> None:
+    def __init__(self, token: Token, right: Node) -> None:
         self.token = token
         self.right = right
     
@@ -334,7 +334,7 @@ class UnaryOpNode:
         return dict(token=self.token, right=self.right)
 
 class ConditionalNode:
-    def __init__(self, token, condition, body, elsebody = []) -> None:
+    def __init__(self, token: Token, condition: Node, body: List[Node], elsebody: List[Node] = []) -> None:
         self.token = token
         self.condition = condition
         self.body = body
@@ -344,7 +344,7 @@ class ConditionalNode:
         return dict(token=self.token, condition=self.condition, body=self.body, elsebody=self.elsebody)
 
 class DoNode:
-    def __init__(self, name, body) -> None:
+    def __init__(self, name: str, body: List[Node]) -> None:
         self.name = name
         self.body = body
     
@@ -352,7 +352,7 @@ class DoNode:
         return dict(name=self.name, body=self.body)
 
 class Parser:
-    def __init__(self, file_name, tokens: List[Token]) -> None:
+    def __init__(self, file_name: str, tokens: List[Token]) -> None:
         self.tokens = tokens
         self.index = -1
         
