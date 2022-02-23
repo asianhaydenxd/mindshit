@@ -194,10 +194,6 @@ class Lexer:
     def lex(self) -> Tuple[List[Token], Error]:
         tokens = []
         
-        def parseToken(token: str, token_len: int):
-            tokens.append(Token(Tk.OP, token, self.pos))
-            self.next(token_len)
-        
         while self.char != None:
             if self.char in WHITESPACE:
                 self.next()
@@ -222,7 +218,9 @@ class Lexer:
             else:
                 for op in Tk.OPERATORS:
                     if self.chars(len(op)) == op:
-                        parseToken(op, len(op))
+                        tokens.append(Token(Tk.OP, op, self.pos))
+                        self.next(len(op))
+                        break
                 else:
                     return [], IllegalCharError(f"'{self.char}'", self.pos)
         
