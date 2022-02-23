@@ -478,7 +478,6 @@ class Parser:
             self.next()
             return AddressNode(address_token.value), None
         
-        # TODO: move 'do' definition to somewhere with less priority
         if token.full == (Tk.KW, 'do'):
             donode = DoNode('do', [])
             while self.token.full not in [(Tk.EOF), (Tk.KW, 'end')]:
