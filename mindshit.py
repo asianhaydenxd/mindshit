@@ -220,12 +220,10 @@ class Lexer:
                 self.skip_multiline_comment()
             
             else:
-                ok = False
-                for valid_token in Tk.OPERATORS:
-                    if self.chars(len(valid_token)) == valid_token:
-                        ok = True
-                        parseToken(valid_token, len(valid_token))
-                if not ok:
+                for op in Tk.OPERATORS:
+                    if self.chars(len(op)) == op:
+                        parseToken(op, len(op))
+                else:
                     return [], IllegalCharError(f"'{self.char}'", self.pos)
         
         tokens.append(Token(Tk.EOF, start=self.pos))
