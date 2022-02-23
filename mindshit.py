@@ -1,7 +1,6 @@
 # Imports
 from typing import Callable, Iterable, TypeVar, Union, List, Tuple
-import json
-import sys
+import json, sys
 
 Self = TypeVar('Self')
 Node = TypeVar('Node')
