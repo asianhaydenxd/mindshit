@@ -127,6 +127,27 @@ class Tk:
         'print',
         'input',
     ]
+    
+    OPERATORS = [
+        # Data relocation
+        '<->', '->',
+        
+        # Arithmetic assignment
+        '+=', '-=',
+        
+        # Comparison
+        '==', '!=', '<=', '>=',
+        '<', '>',
+        
+        # Misc
+        '&', '=', ':',
+        
+        # Brackets
+        '(', ')', '[', ']',
+        
+        # Arithmetic
+        '+', '-', '*', '/', '%',
+    ]
 
 class Token:
     def __init__(self, type_: str, value: str = None, start: Position = None, end: Position = None) -> None:
@@ -173,7 +194,6 @@ class Lexer:
     def lex(self) -> Tuple[List[Token], Error]:
         tokens = []
         
-        valid_tokens = ['<->', '+=', '-=', '->', '==', '!=', '<=', '>=', '&', '=', ':', '(', ')', '[', ']', '+', '-', '*', '/', '%', '>', '<']
         def parseToken(token: str, token_len: int):
             tokens.append(Token(Tk.OP, token, self.pos))
             self.next(token_len)
@@ -201,7 +221,7 @@ class Lexer:
             
             else:
                 ok = False
-                for valid_token in valid_tokens:
+                for valid_token in Tk.OPERATORS:
                     if self.chars(len(valid_token)) == valid_token:
                         ok = True
                         parseToken(valid_token, len(valid_token))
