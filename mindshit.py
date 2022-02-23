@@ -622,7 +622,7 @@ class Compiler:
                 return result
             
             if node.token.full in [(Tk.KW, 'if'), (Tk.KW, 'elif')]:
-                temp0, temp1, temp2, returned = self.memory.allocate(4)
+                returned, temp0, temp1, temp2 = self.memory.allocate(4)
                 
                 result += self.visit(node.condition)
                 condition = self.pointer
@@ -770,7 +770,7 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '+'):
-                temp0, returned = self.memory.allocate(2)
+                returned, temp0 = self.memory.allocate(2)
                 
                 result += self.visit(node.left)
                 left = self.pointer
@@ -789,7 +789,7 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '-'):
-                temp0, returned = self.memory.allocate(2)
+                returned, temp0 = self.memory.allocate(2)
                 
                 result = self.visit(node.left)
                 left = self.pointer
@@ -808,7 +808,7 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '*'):
-                temp0, temp1, returned = self.memory.allocate(3)
+                returned, temp0, temp1 = self.memory.allocate(3)
                 
                 result = self.visit(node.left)
                 left = self.pointer
@@ -828,7 +828,7 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '/'):
-                temp0, temp1, temp2, temp3, returned = self.memory.allocate(5)
+                returned, temp0, temp1, temp2, temp3 = self.memory.allocate(5)
                 
                 result += self.visit(node.left)
                 left = self.pointer
@@ -852,7 +852,7 @@ class Compiler:
             # TODO: implement modulus
             
             if node.token.full == (Tk.OP, '=='):
-                temp0, temp1, returned = self.memory.allocate(3)
+                returned, temp0, temp1 = self.memory.allocate(3)
                 
                 result += self.visit(node.left)
                 left = self.pointer
@@ -872,7 +872,7 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '!='):
-                temp0, temp1, returned = self.memory.allocate(3)
+                returned, temp0, temp1 = self.memory.allocate(3)
                 
                 result += self.visit(node.left)
                 left = self.pointer
