@@ -827,6 +827,28 @@ class Compiler:
                 self.memory.rmv(temp0, temp1)
                 return result
             
+            if node.token.full == (Tk.OP, '/'):
+                temp0, temp1, temp2, temp3, returned = self.memory.allocate(5)
+                
+                result += self.visit(node.left)
+                left = self.pointer
+                
+                result += self.visit(node.right)
+                right = self.pointer
+                
+                result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t0[-]t1[-]t2[-]t3[-]r[t0+r-]t0[y[t1+t2+y-]t2[y+t2-]t1[t2+t0-[t2[-]t3+t0-]t3[t0+t3-]t2[t1-[r-t1[-]]+t2-]t1-]r+t0]r',
+                    t0 = temp0,
+                    t1 = temp1,
+                    t2 = temp2,
+                    t3 = temp3,
+                    r = returned,
+                    x  = left,
+                    y  = right,
+                )
+                
+                self.memory.rmv(temp0, temp1, temp2, temp3)
+                return result
+            
             # TODO: implement more operators
             
             if node.token.full == (Tk.OP, '=='):
