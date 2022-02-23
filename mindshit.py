@@ -713,7 +713,7 @@ class Compiler:
                     y  = right,
                 )
                 
-                self.memory.rmv(temp0)
+                self.memory.rmv(temp0, temp1)
                 return result
 
             if node.token.full == (Tk.OP, '->'):
