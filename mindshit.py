@@ -132,7 +132,7 @@ class Tk:
         '<->', '->',
         
         # Arithmetic assignment
-        '+=', '-=',
+        '+=', '-=', '*=',
         
         # Comparison
         '==', '!=', '<=', '>=',
@@ -440,7 +440,7 @@ class Parser:
     
     def expr(self) -> Union[ConditionalNode, BinaryOpNode, UnaryOpNode]:
         return  self.conditional_op([(Tk.KW, 'while'), (Tk.KW, 'if')],
-        lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '->'), (Tk.OP, '<->')], 
+        lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '*='), (Tk.OP, '->'), (Tk.OP, '<->')], 
         lambda: self.binary_op([(Tk.KW, 'or')],
         lambda: self.binary_op([(Tk.KW, 'and')],
         lambda: self.unary_op([(Tk.KW, 'not')],
@@ -690,6 +690,25 @@ class Compiler:
                 
                 result += self.bf_parse('t0[-]y[x-t0+y-]t0[y+t0-]x',
                     t0 = temp0,
+                    x  = left,
+                    y  = right,
+                )
+                
+                self.memory.rmv(temp0)
+                return result
+            
+            if node.token.full == (Tk.OP, '*='):
+                temp0, temp1 = self.memory.allocate(2)
+                
+                result += self.visit(node.left)
+                left = self.pointer
+                
+                result += self.visit(node.right)
+                right = self.pointer
+                
+                result += self.bf_parse('t0[-]t1[-]x[t1+x-]t1[y[x+t0+y-]t0[y+t0-]t1-]x',
+                    t0 = temp0,
+                    t1 = temp1,
                     x  = left,
                     y  = right,
                 )
