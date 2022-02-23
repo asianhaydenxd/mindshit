@@ -849,7 +849,7 @@ class Compiler:
                 self.memory.rmv(temp0, temp1, temp2, temp3)
                 return result
             
-            # TODO: implement more operators
+            # TODO: implement modulus
             
             if node.token.full == (Tk.OP, '=='):
                 temp0, temp1, returned = self.memory.allocate(3)
