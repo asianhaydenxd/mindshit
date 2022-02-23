@@ -173,7 +173,7 @@ class Lexer:
     def lex(self) -> Tuple[List[Token], Error]:
         tokens = []
         
-        valid_tokens = ['<->', '//', '/*', '+=', '-=', '->', '==', '!=', '<=', '>=', '&', '=', ':', '(', ')', '[', ']', '+', '-', '*', '/', '%', '>', '<']
+        valid_tokens = ['<->', '+=', '-=', '->', '==', '!=', '<=', '>=', '&', '=', ':', '(', ')', '[', ']', '+', '-', '*', '/', '%', '>', '<']
         def parseToken(token: str, token_len: int):
             tokens.append(Token(Tk.OP, token, self.pos))
             self.next(token_len)
@@ -192,6 +192,12 @@ class Lexer:
                 token, error = self.make_char()
                 if error: return [], error
                 tokens.append(token)
+            
+            elif self.chars(2) == '//':
+                self.skip_oneline_comment()
+                
+            elif self.chars(2) == '/*':
+                self.skip_multiline_comment()
             
             else:
                 ok = False
