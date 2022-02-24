@@ -148,6 +148,12 @@ class Tk:
         '+', '-', '*', '/', '%',
     ]
 
+class Type:
+    INT = 'int'
+    CHAR = 'char'
+    BOOL = 'bool'
+    VOID = 'void'
+
 class Token:
     def __init__(self, type_: str, value: str = None, start: Position = None, end: Position = None) -> None:
         self.type = type_
@@ -288,8 +294,9 @@ class Lexer:
         self.next(2)
 
 class LiteralNode:
-    def __init__(self, value: int) -> None:
+    def __init__(self, value: int, type_: Type) -> None:
         self.value = value
+        self.type = type_
     
     def reprJSON(self) -> str:
         return dict(value=self.value)
@@ -458,19 +465,19 @@ class Parser:
         self.next()
         
         if token.type == Tk.INT:
-            return LiteralNode(token.value), None
+            return LiteralNode(token.value, Type.INT), None
         
         if token.type == Tk.CHAR:
-            return LiteralNode(ord(token.value)), None
+            return LiteralNode(ord(token.value), Type.CHAR), None
         
         if token.type == Tk.STR:
             return ArrayNode([LiteralNode(ord(char)) for char in token.value]), None
 
         if token.full == (Tk.KW, 'true'):
-            return LiteralNode(1), None
+            return LiteralNode(1, Type.BOOL), None
         
         if token.full == (Tk.KW, 'false'):
-            return LiteralNode(0), None
+            return LiteralNode(0, Type.BOOL), None
         
         if token.full == (Tk.OP, '&'):
             address_token = self.token
@@ -532,16 +539,15 @@ class InfiniteList:
     def __repr__(self) -> str:
         return str(self.list)
 
-# Infinity-like list of boolean values indicating whether each slot is used
+# Infinity-like list of boolean values indicating whether each slot is used along with their type
 class MemoryUsageList(InfiniteList):
     def __init__(self) -> None:
-        super().__init__(False)
+        super().__init__(None)
     
-    def use(self, *indices) -> None:
-        for index in indices:
-            self[index] = True
+    def use(self, index: int, type_: Type) -> None:
+        self[index] = type_
     
-    def rmv(self, *indices) -> None:
+    def rmv(self, *indices: int) -> None:
         for index in indices:
             self[index] = False
     
@@ -549,7 +555,7 @@ class MemoryUsageList(InfiniteList):
         for index, value in enumerate(self.list):
             if not value:
                 return index
-        self[len(self.list)] = False
+        self[len(self.list)] = None
         return len(self.list) - 1
     
     def get_array(self, size: int) -> int:
@@ -566,28 +572,27 @@ class MemoryUsageList(InfiniteList):
                 
             if total_size == size:
                 return start_index
-        self[len(self.list)-1+size] = False
+        self[len(self.list)-1+size] = None
         return len(self.list)-size
     
-    def allocate(self, count: int = 1) -> int:
-        if count == 1:
+    def allocate(self, *types) -> int:
+        if len(types) == 1:
             cell_found = self.get_cell()
-            self.use(cell_found)
+            self.use(cell_found, types[0])
             return cell_found
+            
         cells = []
-        for _ in range(count):
+        for type_ in types:
             cell_found = self.get_cell()
-            self.use(cell_found)
+            self.use(cell_found, type_)
             cells.append(cell_found)
         return tuple(cells)
     
-    def allocate_array(self, size: int) -> int:
+    def allocate_array(self, size: int, type_: Type) -> int:
         array_found = self.get_array(size)
         for i in range(size):
-            self.use(array_found + i)
+            self.use(array_found + i, type_)
         return array_found
-
-# TODO: create new InfiniteList for storing type casting (chars, ints, bools, voids)
 
 class Compiler:
     def __init__(self, mainnode) -> None:
@@ -610,7 +615,7 @@ class Compiler:
         
         if type(node) == ConditionalNode:
             if node.token.full == (Tk.KW, 'while'):
-                temp0, temp1 = self.memory.allocate(2)
+                temp0, temp1 = self.memory.allocate(Type.INT, Type.INT)
                 
                 result += self.bf_parse('x[b0x]r_b0',
                     t0 = temp0,
@@ -622,7 +627,7 @@ class Compiler:
                 return result
             
             if node.token.full in [(Tk.KW, 'if'), (Tk.KW, 'elif')]:
-                returned, temp0, temp1, temp2 = self.memory.allocate(4)
+                returned, temp0, temp1, temp2 = self.memory.allocate(Type.BOOL, Type.INT, Type.INT, Type.INT)
                 
                 result += self.visit(node.condition)
                 condition = self.pointer
@@ -644,7 +649,7 @@ class Compiler:
         
         if type(node) == BinaryOpNode:
             if node.token.full == (Tk.OP, '='):
-                temp0 = self.memory.allocate()
+                temp0 = self.memory.allocate(Type.INT)
                 
                 result += self.visit(node.left)
                 left = self.pointer
@@ -662,7 +667,7 @@ class Compiler:
                 return result
                     
             if node.token.full == (Tk.OP, '+='):
-                temp0 = self.memory.allocate()
+                temp0 = self.memory.allocate(Type.INT)
                 
                 result += self.visit(node.left)
                 left = self.pointer
@@ -680,7 +685,7 @@ class Compiler:
                 return result
                     
             if node.token.full == (Tk.OP, '-='):
-                temp0 = self.memory.allocate()
+                temp0 = self.memory.allocate(Type.INT)
                 
                 result += self.visit(node.left)
                 left = self.pointer
@@ -698,7 +703,7 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '*='):
-                temp0, temp1 = self.memory.allocate(2)
+                temp0, temp1 = self.memory.allocate(Type.INT, Type.INT)
                 
                 result += self.visit(node.left)
                 left = self.pointer
@@ -717,7 +722,7 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '/='):
-                temp0, temp1, temp2, temp3 = self.memory.allocate(4)
+                temp0, temp1, temp2, temp3 = self.memory.allocate(Type.INT, Type.INT, Type.INT, Type.INT)
                 
                 result += self.visit(node.left)
                 left = self.pointer
@@ -752,7 +757,7 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '<->'):
-                temp0 = self.memory.allocate()
+                temp0 = self.memory.allocate(Type.INT)
                 
                 result += self.visit(node.left)
                 left = self.pointer
@@ -770,7 +775,7 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '+'):
-                returned, temp0 = self.memory.allocate(2)
+                returned, temp0 = self.memory.allocate(Type.INT, Type.INT)
                 
                 result += self.visit(node.left)
                 left = self.pointer
@@ -789,7 +794,7 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '-'):
-                returned, temp0 = self.memory.allocate(2)
+                returned, temp0 = self.memory.allocate(Type.INT, Type.INT)
                 
                 result = self.visit(node.left)
                 left = self.pointer
@@ -808,7 +813,7 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '*'):
-                returned, temp0, temp1 = self.memory.allocate(3)
+                returned, temp0, temp1 = self.memory.allocate(Type.INT, Type.INT, Type.INT)
                 
                 result = self.visit(node.left)
                 left = self.pointer
@@ -828,7 +833,7 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '/'):
-                returned, temp0, temp1, temp2, temp3 = self.memory.allocate(5)
+                returned, temp0, temp1, temp2, temp3 = self.memory.allocate(Type.INT, Type.INT, Type.INT, Type.INT, Type.INT)
                 
                 result += self.visit(node.left)
                 left = self.pointer
@@ -852,7 +857,7 @@ class Compiler:
             # TODO: implement modulus
             
             if node.token.full == (Tk.OP, '=='):
-                returned, temp0, temp1 = self.memory.allocate(3)
+                returned, temp0, temp1 = self.memory.allocate(Type.BOOL, Type.INT, Type.INT)
                 
                 result += self.visit(node.left)
                 left = self.pointer
@@ -872,7 +877,7 @@ class Compiler:
                 return result
             
             if node.token.full == (Tk.OP, '!='):
-                returned, temp0, temp1 = self.memory.allocate(3)
+                returned, temp0, temp1 = self.memory.allocate(Type.BOOL, Type.INT, Type.INT)
                 
                 result += self.visit(node.left)
                 left = self.pointer
@@ -918,7 +923,7 @@ class Compiler:
                 return self.visit(node.right) + self.input()
             
             if node.token.full == (Tk.KW, 'not'):
-                temp0, returned = self.memory.allocate(2)
+                temp0, returned = self.memory.allocate(Type.INT, Type.BOOL)
                 
                 result += self.visit(node.right)
                 right = self.pointer
@@ -932,23 +937,27 @@ class Compiler:
                 self.memory.rmv(temp0)
                 return result
             
+            # TODO: implement identifier initializers (int, char, bool)
+            
             raise RuntimeError('unary operator not defined in compiler')
         
         if type(node) == AddressNode:
             return self.move(node.address)
         
         if type(node) == IdentifierNode:
+            # TODO: raise an error when the specified identifier does not exist
             if node.title in self.aliases:
                 return self.move(self.aliases[node.title])
-            cell_found = self.memory.allocate()
+            cell_found = self.memory.allocate(Type.INT)
             self.aliases[node.title] = cell_found
             return self.move(self.aliases[node.title])
         
         if type(node) == LiteralNode:
-            cell_found = self.memory.allocate()
+            cell_found = self.memory.allocate(node.type)
             return self.move(cell_found) + self.assign(node.value)
         
         if type(node) == ArrayNode:
+            # TODO: specifiy array types
             array_address = self.memory.allocate_array(len(node.array))
             for i, subnode in enumerate(node.array):
                 if type(subnode) == LiteralNode:
