@@ -536,6 +536,7 @@ class Parser:
                 return expr
 
         if token.type == Tk.ID:
+            # TODO: detect if indexing [] follows
             return IdentifierNode(token.value), None
         
         return None, Error('Exception Raised', 'invalid factor', token.start, token.end)
@@ -987,8 +988,8 @@ class Compiler:
         if type(node) == AddressNode:
             return self.move(node.address)
         
+        # TODO: take indexing [] after identifiers
         if type(node) == IdentifierNode:
-            # TODO: raise an error when the specified identifier does not exist
             if node.title in self.aliases:
                 return self.move(self.aliases[node.title])
             raise RuntimeError('specified identifier has not been declared')
