@@ -104,14 +104,21 @@ class Tk:
     KEYWORDS = [
         # Loop blocks
         'while',
-        'end',
         
         # Conditional blocks
         'if',
         'elif',
         'else',
         
+        # Block tokens
         'do',
+        'end',
+        
+        # Type declarations
+        'int',
+        'char',
+        'bool',
+        'void',
         
         # Boolean literals
         'true',
@@ -447,6 +454,7 @@ class Parser:
     
     def expr(self) -> Union[ConditionalNode, BinaryOpNode, UnaryOpNode]:
         return  self.conditional_op([(Tk.KW, 'while'), (Tk.KW, 'if')],
+        lambda: self.unary_op([(Tk.KW, 'int'), (Tk.KW, 'char'), (Tk.KW, 'bool')],
         lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '*='), (Tk.OP, '/='), (Tk.OP, '->'), (Tk.OP, '<->')], 
         lambda: self.binary_op([(Tk.KW, 'or')],
         lambda: self.binary_op([(Tk.KW, 'and')],
@@ -458,7 +466,7 @@ class Parser:
         lambda: self.unary_op([(Tk.KW, 'input')],
         lambda: self.unary_op([(Tk.KW, 'print')], 
                 self.factor
-        )))))))))))
+        ))))))))))))
             
     def factor(self) -> Node:
         token = self.token
@@ -937,7 +945,17 @@ class Compiler:
                 self.memory.rmv(temp0)
                 return result
             
-            # TODO: implement identifier initializers (int, char, bool)
+            # TODO: implement arrays (int[] a = 1)
+            # TODO: allow for declaration without assignment
+            if node.token.type == Tk.KW and node.token.value in ['int', 'char', 'bool']:
+                if node.token.value == 'int':  cell_found = self.memory.allocate(Type.INT)
+                if node.token.value == 'char': cell_found = self.memory.allocate(Type.CHAR)
+                if node.token.value == 'bool': cell_found = self.memory.allocate(Type.BOOL)
+                    
+                self.aliases[node.right.left.title] = cell_found
+                result += self.move(self.aliases[node.right.left.title])
+                result += self.visit(node.right)
+                return result
             
             raise RuntimeError('unary operator not defined in compiler')
         
@@ -948,9 +966,7 @@ class Compiler:
             # TODO: raise an error when the specified identifier does not exist
             if node.title in self.aliases:
                 return self.move(self.aliases[node.title])
-            cell_found = self.memory.allocate(Type.INT)
-            self.aliases[node.title] = cell_found
-            return self.move(self.aliases[node.title])
+            raise RuntimeError('specified identifier has not been declared')
         
         if type(node) == LiteralNode:
             cell_found = self.memory.allocate(node.type)
