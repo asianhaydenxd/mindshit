@@ -965,15 +965,20 @@ class Compiler:
             if node.token.full == (Tk.KW, 'input'):
                 return self.visit(node.args[0]) + self.input()
             
-            # TODO: implement arrays (int[] a = 1)
-            # TODO: allow for declaration without assignment
+            # TODO: implement arrays (int a[1] = [1])
             if node.token.type == Tk.KW and node.token.value in ['int', 'char', 'bool']:
                 if node.token.value == 'int':  cell_found = self.memory.allocate(Type.INT)
                 if node.token.value == 'char': cell_found = self.memory.allocate(Type.CHAR)
                 if node.token.value == 'bool': cell_found = self.memory.allocate(Type.BOOL)
                 
-                self.aliases[node.args[0].left.title] = cell_found
-                result += self.move(self.aliases[node.args[0].left.title])
+                if type(node.args[0]) == BinaryOpNode:
+                    self.aliases[node.args[0].left.title] = cell_found
+                    result += self.move(self.aliases[node.args[0].left.title])
+                    result += self.visit(node.args[0])
+                    return result
+
+                self.aliases[node.args[0].title] = cell_found
+                result += self.move(self.aliases[node.args[0].title])
                 result += self.visit(node.args[0])
                 return result
             
