@@ -346,6 +346,14 @@ class UnaryOpNode:
     
     def reprJSON(self) -> str:
         return dict(token=self.token, right=self.right)
+    
+class FunctionOpNode:
+    def __init__(self, token: Token, args: List[Node]) -> None:
+        self.token = token
+        self.args = args
+    
+    def reprJSON(self) -> str:
+        return dict(token=self.token, args=self.args)
 
 class ConditionalNode:
     def __init__(self, token: Token, condition: Node, body: List[Node], elsebody: List[Node] = []) -> None:
@@ -406,6 +414,17 @@ class Parser:
             right, error = function()
             left = BinaryOpNode(left, op_token, right)
         return left, error
+    
+    def function_op(self, ops: List[Tuple[str]], argc: int, function: Callable) -> UnaryOpNode:
+        while self.token.full in ops:
+            op_token = self.token
+            self.next()
+            args = []
+            for _ in range(argc):
+                right, error = function()
+                args.append(right)
+            return FunctionOpNode(op_token, args), error
+        return function()
 
     def conditional_op(self, ops: List[Tuple[str]], function: Callable) -> Union[ConditionalNode, BinaryOpNode, UnaryOpNode]:
         if self.token.full in ops:
@@ -454,7 +473,7 @@ class Parser:
     
     def expr(self) -> Union[ConditionalNode, BinaryOpNode, UnaryOpNode]:
         return  self.conditional_op([(Tk.KW, 'while'), (Tk.KW, 'if')],
-        lambda: self.unary_op([(Tk.KW, 'int'), (Tk.KW, 'char'), (Tk.KW, 'bool')],
+        lambda: self.function_op([(Tk.KW, 'int'), (Tk.KW, 'char'), (Tk.KW, 'bool')], 1,
         lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '*='), (Tk.OP, '/='), (Tk.OP, '->'), (Tk.OP, '<->')], 
         lambda: self.binary_op([(Tk.KW, 'or')],
         lambda: self.binary_op([(Tk.KW, 'and')],
@@ -463,8 +482,8 @@ class Parser:
         lambda: self.binary_op([(Tk.OP, '+'), (Tk.OP, '-')],
         lambda: self.binary_op([(Tk.OP, '*'), (Tk.OP, '/'), (Tk.OP, '%')],
         lambda: self.binary_op([(Tk.OP, ':')],
-        lambda: self.unary_op([(Tk.KW, 'input')],
-        lambda: self.unary_op([(Tk.KW, 'print')], 
+        lambda: self.function_op([(Tk.KW, 'input')], 1,
+        lambda: self.function_op([(Tk.KW, 'print')], 1, 
                 self.factor
         ))))))))))))
             
@@ -916,20 +935,7 @@ class Compiler:
                         
             raise RuntimeError('binary operator not defined in compiler')
         
-        if type(node) == UnaryOpNode:
-            if node.token.full == (Tk.KW, 'print'):
-                # FIXME: weird formatting, needs extensive testing
-                if type(node.right) == ArrayNode:
-                    result += self.visit(node.right)
-                    for _ in range(len(node.right.array) + 1):
-                        result += self.output()
-                        result += self.right(1)
-                    return result
-                return self.visit(node.right) + self.output()
-            
-            if node.token.full == (Tk.KW, 'input'):
-                return self.visit(node.right) + self.input()
-            
+        if type(node) == UnaryOpNode:            
             if node.token.full == (Tk.KW, 'not'):
                 temp0, returned = self.memory.allocate(Type.INT, Type.BOOL)
                 
@@ -944,6 +950,20 @@ class Compiler:
                 
                 self.memory.rmv(temp0)
                 return result
+        
+        if type(node) == FunctionOpNode:
+            if node.token.full == (Tk.KW, 'print'):
+                # FIXME: weird formatting, needs extensive testing
+                if type(node.args[0]) == ArrayNode:
+                    result += self.visit(node.args[0])
+                    for _ in range(len(node.args[0].array) + 1):
+                        result += self.output()
+                        result += self.args[0](1)
+                    return result
+                return self.visit(node.args[0]) + self.output()
+            
+            if node.token.full == (Tk.KW, 'input'):
+                return self.visit(node.args[0]) + self.input()
             
             # TODO: implement arrays (int[] a = 1)
             # TODO: allow for declaration without assignment
@@ -951,10 +971,10 @@ class Compiler:
                 if node.token.value == 'int':  cell_found = self.memory.allocate(Type.INT)
                 if node.token.value == 'char': cell_found = self.memory.allocate(Type.CHAR)
                 if node.token.value == 'bool': cell_found = self.memory.allocate(Type.BOOL)
-                    
-                self.aliases[node.right.left.title] = cell_found
-                result += self.move(self.aliases[node.right.left.title])
-                result += self.visit(node.right)
+                
+                self.aliases[node.args[0].left.title] = cell_found
+                result += self.move(self.aliases[node.args[0].left.title])
+                result += self.visit(node.args[0])
                 return result
             
             raise RuntimeError('unary operator not defined in compiler')
