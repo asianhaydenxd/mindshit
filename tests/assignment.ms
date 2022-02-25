@@ -1,6 +1,6 @@
-a = 'a'
-b = a
-c = 'c'
+char a = 'a'
+char b = a
+char c = 'c'
 print(a)
 print(b)
 print(c)

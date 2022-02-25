@@ -1,5 +1,5 @@
-i = 10
-c = 0
+int i = 10
+int c = 0
 
 while i
     i -= 1

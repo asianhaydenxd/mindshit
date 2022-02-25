@@ -1,4 +1,4 @@
-a = 48
+int a = 48
 print(a)
 a += 5
 print(a)

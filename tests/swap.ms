@@ -1,5 +1,5 @@
-a = 'a'
-b = 'b'
+char a = 'a'
+char b = 'b'
 
 a <-> b
 
