@@ -284,6 +284,23 @@ class Lexer:
         self.next()
         
         while self.char != None and self.char != quote_type:
+            if self.char == '\\':
+                self.next()
+                if   self.char == 'b': text_str += chr(8)
+                elif self.char == 't': text_str += chr(9)
+                elif self.char == 'n': text_str += chr(10)
+                elif self.char == 'f': text_str += chr(12)
+                elif self.char == 'r': text_str += chr(13)
+                elif self.char == 's': text_str += chr(32)
+                elif self.char =='\"': text_str += chr(34)
+                elif self.char =='\'': text_str += chr(39)
+                elif self.char =='\\': text_str += chr(92)
+                else:
+                    text_str += '\\'
+                    continue
+                self.next()
+                continue
+                
             text_str += self.char
             self.next()
         
