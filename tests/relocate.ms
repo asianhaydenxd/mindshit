@@ -2,7 +2,7 @@ char a = 'a'
 char b
 char c
 
-a -> b
+b <- a
 print(b)
-b -> c
+c <- b
 print(c)

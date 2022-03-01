@@ -136,7 +136,7 @@ class Tk:
     
     OPERATORS = [
         # Data relocation
-        '<->', '->',
+        '<->', '<-',
         
         # Arithmetic assignment
         '+=', '-=', '*=', '/=',
@@ -474,7 +474,7 @@ class Parser:
     def expr(self) -> Union[ConditionalNode, BinaryOpNode, UnaryOpNode]:
         return  self.conditional_op([(Tk.KW, 'while'), (Tk.KW, 'if')],
         lambda: self.function_op([(Tk.KW, 'int'), (Tk.KW, 'char'), (Tk.KW, 'bool')], 1,
-        lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '*='), (Tk.OP, '/='), (Tk.OP, '->'), (Tk.OP, '<->')], 
+        lambda: self.binary_op([(Tk.OP, '='), (Tk.OP, '+='), (Tk.OP, '-='), (Tk.OP, '*='), (Tk.OP, '/='), (Tk.OP, '<-'), (Tk.OP, '<->')], 
         lambda: self.binary_op([(Tk.KW, 'or')],
         lambda: self.binary_op([(Tk.KW, 'and')],
         lambda: self.unary_op([(Tk.KW, 'not')],
@@ -770,7 +770,7 @@ class Compiler:
                 self.memory.rmv(temp0, temp1, temp2, temp3)
                 return result
 
-            if node.token.full == (Tk.OP, '->'):
+            if node.token.full == (Tk.OP, '<-'):
                 result += self.visit(node.left)
                 left = self.pointer
                 
