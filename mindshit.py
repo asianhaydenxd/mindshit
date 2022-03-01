@@ -777,7 +777,7 @@ class Compiler:
                 result += self.visit(node.right)
                 right = self.pointer
                 
-                result += self.bf_parse('y[-]x[y+x-]y',
+                result += self.bf_parse('x[-]y[x+y-]x',
                     x = left,
                     y = right,
                 )
