@@ -1,102 +1,36 @@
 # mindshit
-A compiled language written in python that compiles to brainfuck.
+An imperative programming language that compiles to brainfuck.
 
-## Features
+## Language Reference
 
 ### Literals
-    10 -> 10
-    'H' -> 72
-    true -> 1
 
-### Assignment
-`<cell> = <literal>`
-*Go to cell, set it to zero, and add the literal*
+#### Integer
 
-    &0 = 1
-    &1 = 2
+An integer is any positive whole number between 0 and 255. It is written as a number without any decimal point.
 
-### Operator Assignment
-`<cell> +=/-= <literal>`
-*Go to cell and add or subtract it with the literal*
+    int index = 5
 
-    &0 += 4
-    &0 -= 2
+#### Boolean
 
-### Output
-`out <cell>`
-*Output the value of a cell*
+A boolean is `true` or `false` and is stored as a 1 or a 0. It is mainly used by conditional blocks suck as `if` or `while`.
 
-    &0 = 1
-    out &0
+    bool is_enabled = true
 
-### Input
-`in <cell>`
-*Write input to a cell*
+#### Character
 
-    a: in &0
-    out a
+A character is an integer value represented via ASCII or Unicode. It is written as a single character or an escaped character surrounded by either single (`''`) or double (`""`) quotes.
 
-### Output Statement
-`out <statement>`
-*Carry out statement and output its return value*
+    char letter = 'a'
 
-    out &0 = 1
+#### String
 
-### Aliasing
-`out <statement>`
-*Attach identifiers to certain cells*
+A string is an array/collection of characters. It is written as multiple characters surrounded by either single (`''`) or double (`""`) quotes.
 
-    a: &0
-    b: &1 = 5
-    a = 1
+    str message = 'Hello world!'
 
-### Relocating
-`<cell> -> <cell>`
-*Set target cell to current cell and clear the current cell*
+#### Long integer
 
-    &0 = 1
-    &0 -> &1
+A long integer is an array/collection of integers in order to represent a single large integer. It is written as an integer greater than 255 (underscores may be used instead of commas).
 
-### Swapping
-`<cell> -> <cell>`
-*Swap the values of two cells*
-
-    &0 = 1
-    &1 = 2
-    &0 <-> &1
-
-### Assignment to cells
-`<cell> = <cell>`
-*Set the cell value to the value of the target cell*
-
-    &0 = 1
-    &1 = &0
-
-### While loops
-`while <cell> ... end`
-*Execute a block of code until the specified condition cell is false*
-
-    i: &0 = 5
-    while i
-        i -= 1
-    end
-
-### If statements
-`if <cell> ... end`
-*Execute a block of code if the specified condition cell is true*
-
-    i: &0 = 1
-    if i
-        i += 1
-    end
-
-### If-else statements
-`if <cell> ... else ... end`
-*Execute one block of code if the specified condition cell is true and another if false*
-
-    i: &0 = 1
-    if i
-        i += 1
-    else
-        i += 2
-    end
+    long clicks = 13_370_000
