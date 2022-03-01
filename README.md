@@ -34,3 +34,25 @@ A string is an array/collection of characters. It is written as multiple charact
 A long integer is an array/collection of integers in order to represent a single large integer. It is written as an integer greater than 255 (underscores may be used instead of commas).
 
     long clicks = 13_370_000
+
+### Control Flow
+
+#### If Statement
+
+An `if` statement runs the body of the statement if the condition is met. If it isn't met, other code can be run with the use of the keywords `else` if the condition is not met or `elif` if more conditions are to be checked.
+
+    if <condition>
+        <body>
+    elif <condition>
+        <body>
+    else
+        <body>
+    end
+
+#### While Loop
+
+A `while` loop checks the condition, and if it is met, run the body of the statement and repeat. If the condition is not met, it will exit the loop.
+
+    while <condition>
+        <body>
+    end
