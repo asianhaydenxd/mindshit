@@ -544,7 +544,6 @@ class Parser:
                 return expr
 
         if token.type == Tk.ID:
-            # TODO: detect if indexing [] follows
             if self.token.full == (Tk.OP, '['):
                 self.next()
                 index = self.expr()
@@ -642,6 +641,7 @@ class Compiler:
         self.mainnode = mainnode
     
     def compile(self) -> str:
+        # TODO: add self.arrays list for storing array positions and lengths
         self.aliases = {}
         self.literals = {}
         self.memory = MemoryUsageList()
@@ -1003,8 +1003,8 @@ class Compiler:
         if type(node) == AddressNode:
             return self.move(node.address)
         
+        # ! self.arrays has not yet been created
         if type(node) == ArrayAccessNode:
-            # ! self.arrays has not yet been created
             if node.array_title in self.arrays:
                 return self.move(self.arrays[node.array_title])
             raise RuntimeError('specified array has not been declared')
