@@ -323,6 +323,14 @@ class ArrayNode:
     def reprJSON(self) -> str:
         return dict(array=self.array)
 
+class ArrayAccessNode:
+    def __init__(self, array_title: str, index: Node) -> None:
+        self.array_title = array_title
+        self.index = index
+
+    def reprJSON(self) -> str:
+        return dict(array_name=self.array_title, index=self.index)
+
 class IdentifierNode:
     def __init__(self, title: str) -> None:
         self.title = title
@@ -537,6 +545,13 @@ class Parser:
 
         if token.type == Tk.ID:
             # TODO: detect if indexing [] follows
+            if self.token.full == (Tk.OP, '['):
+                self.next()
+                index = self.expr()
+                if self.token.full == (Tk.OP, ']'):
+                    self.next()
+                    return ArrayAccessNode(token.value, index[0].value), None
+                raise
             return IdentifierNode(token.value), None
         
         return None, Error('Exception Raised', 'invalid factor', token.start, token.end)
@@ -988,7 +1003,12 @@ class Compiler:
         if type(node) == AddressNode:
             return self.move(node.address)
         
-        # TODO: take indexing [] after identifiers
+        if type(node) == ArrayAccessNode:
+            # ! self.arrays has not yet been created
+            if node.array_title in self.arrays:
+                return self.move(self.arrays[node.array_title])
+            raise RuntimeError('specified array has not been declared')
+        
         if type(node) == IdentifierNode:
             if node.title in self.aliases:
                 return self.move(self.aliases[node.title])
