@@ -1045,6 +1045,8 @@ class Compiler:
         if type(node) == IdentifierNode:
             if node.title in self.aliases:
                 return self.move(self.aliases[node.title])
+            if node.title in self.arrays:
+                return self.move(self.arrays[node.title]['position'])
             raise RuntimeError('specified identifier has not been declared')
         
         if type(node) == LiteralNode:
