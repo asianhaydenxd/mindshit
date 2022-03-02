@@ -645,6 +645,7 @@ class Compiler:
     def compile(self) -> str:
         # TODO: add self.arrays list for storing array positions and lengths
         self.aliases = {}
+        self.arrays = {}
         self.literals = {}
         self.memory = MemoryUsageList()
         self.pointer = 0
@@ -985,10 +986,41 @@ class Compiler:
             
             # TODO: implement arrays (int a[1] = [1])
             if node.token.type == Tk.KW and node.token.value in ['int', 'char', 'bool']:
-                if node.token.value == 'int':  cell_found = self.memory.allocate(Type.INT)
-                if node.token.value == 'char': cell_found = self.memory.allocate(Type.CHAR)
-                if node.token.value == 'bool': cell_found = self.memory.allocate(Type.BOOL)
-                
+                # FIXME: code can likely be shortened significantly
+                # Checks if the identifier is an array, if the declaration has assignment, and the declaration type
+
+                # FIXME: throws an error if the declaration does not have assignment "="
+                if type(node.args[0].left) == ArrayAccessNode:
+                    if type(node.args[0]) == BinaryOpNode:
+                        array_size = node.args[0].left.index
+                    else:
+                        array_size = node.args[0].index
+
+                    if   node.token.value == 'int' : cell_found = self.memory.allocate_array(array_size, Type.INT)
+                    elif node.token.value == 'char': cell_found = self.memory.allocate_array(array_size, Type.CHAR)
+                    elif node.token.value == 'bool': cell_found = self.memory.allocate_array(array_size, Type.BOOL)
+
+                    if type(node.args[0]) == BinaryOpNode:
+                        self.arrays[node.args[0].left.array_title] = {
+                            'position': cell_found,
+                            'size': array_size,
+                        }
+                        result += self.move(self.arrays[node.args[0].left.array_title]['position'])
+                        result += self.visit(node.args[0])
+                        return result
+
+                    self.arrays[node.args[0].left.array_title] = {
+                        'position': cell_found,
+                        'size': array_size,
+                    }
+                    result += self.move(self.arrays[node.args[0].array_title]['position'])
+                    result += self.visit(node.args[0])
+                    return result
+
+                elif node.token.value == 'int' : cell_found = self.memory.allocate(Type.INT)
+                elif node.token.value == 'char': cell_found = self.memory.allocate(Type.CHAR)
+                elif node.token.value == 'bool': cell_found = self.memory.allocate(Type.BOOL)
+
                 if type(node.args[0]) == BinaryOpNode:
                     self.aliases[node.args[0].left.title] = cell_found
                     result += self.move(self.aliases[node.args[0].left.title])
@@ -1005,10 +1037,9 @@ class Compiler:
         if type(node) == AddressNode:
             return self.move(node.address)
         
-        # ! self.arrays has not yet been created
         if type(node) == ArrayAccessNode:
             if node.array_title in self.arrays:
-                return self.move(self.arrays[node.array_title])
+                return self.move(self.arrays[node.array_title]['position'])
             raise RuntimeError('specified array has not been declared')
         
         if type(node) == IdentifierNode:
@@ -1022,7 +1053,7 @@ class Compiler:
         
         if type(node) == ArrayNode:
             # TODO: specifiy array types
-            array_address = self.memory.allocate_array(len(node.array))
+            array_address = self.memory.allocate_array(len(node.array), Type.INT)
             for i, subnode in enumerate(node.array):
                 if type(subnode) == LiteralNode:
                     result += self.move(array_address + i)
