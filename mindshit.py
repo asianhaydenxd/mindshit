@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Imports
 from typing import Callable, Iterable, TypeVar, Union, List, Tuple
 import json, sys
