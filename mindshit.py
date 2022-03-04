@@ -1000,50 +1000,20 @@ class Compiler:
                 return self.visit(node.args[0]) + self.input()
             
             if node.token.type == Tk.KW and node.token.value in ['int', 'char', 'bool']:
-                # FIXME: code can likely be shortened significantly
-                # Checks if the identifier is an array, if the declaration has assignment, and the declaration type
+                str_to_type = {'int': Type.INT, 'char': Type.CHAR, 'bool': Type.BOOL}
+                new_variable = node.args[0].left if type(node.args[0]) == BinaryOpNode else node.args[0]
 
-                # FIXME: currently throws an error if the declaration does not have assignment "="
-                # TODO: store datatype info in arrays
-                if type(node.args[0].left) == ArrayAccessNode:
-                    if type(node.args[0]) == BinaryOpNode:
-                        array_size = node.args[0].left.index.value
-                    else:
-                        array_size = node.args[0].index.value
-
-                    if   node.token.value == 'int' : cell_found = self.memory.allocate_array(array_size, Type.INT)
-                    elif node.token.value == 'char': cell_found = self.memory.allocate_array(array_size, Type.CHAR)
-                    elif node.token.value == 'bool': cell_found = self.memory.allocate_array(array_size, Type.BOOL)
-
-                    if type(node.args[0]) == BinaryOpNode:
-                        self.arrays[node.args[0].left.array_title] = {
-                            'position': cell_found,
-                            'size': array_size,
-                        }
-                        result += self.move(self.arrays[node.args[0].left.array_title]['position'])
-                        result += self.visit(node.args[0])
-                        return result
-
-                    self.arrays[node.args[0].left.array_title] = {
-                        'position': cell_found,
-                        'size': array_size,
+                if type(new_variable) == ArrayAccessNode:
+                    self.arrays[new_variable.array_title] = {
+                        'position': self.memory.allocate_array(new_variable.index.value, str_to_type[node.token.value]),
+                        'size': new_variable.index.value,
+                        'type': str_to_type[node.token.value]
                     }
-                    result += self.move(self.arrays[node.args[0].array_title]['position'])
-                    result += self.visit(node.args[0])
-                    return result
-
-                elif node.token.value == 'int' : cell_found = self.memory.allocate(Type.INT)
-                elif node.token.value == 'char': cell_found = self.memory.allocate(Type.CHAR)
-                elif node.token.value == 'bool': cell_found = self.memory.allocate(Type.BOOL)
-
-                if type(node.args[0]) == BinaryOpNode:
-                    self.aliases[node.args[0].left.title] = cell_found
-                    result += self.move(self.aliases[node.args[0].left.title])
-                    result += self.visit(node.args[0])
-                    return result
-
-                self.aliases[node.args[0].title] = cell_found
-                result += self.move(self.aliases[node.args[0].title])
+                    result += self.move(self.arrays[new_variable.array_title]['position'])
+                else:
+                    self.aliases[new_variable.title] = cell_found = self.memory.allocate(str_to_type[node.token.value])
+                    result += self.move(self.aliases[new_variable.title])
+                    
                 result += self.visit(node.args[0])
                 return result
             
