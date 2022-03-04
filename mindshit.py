@@ -148,7 +148,7 @@ class Tk:
         '<', '>',
         
         # Misc
-        '&', '=', ':',
+        '&', '=', ':', ',',
         
         # Brackets
         '(', ')', '[', ']',
@@ -158,10 +158,10 @@ class Tk:
     ]
 
 class Type:
-    INT = 'int'
-    CHAR = 'char'
-    BOOL = 'bool'
-    VOID = 'void'
+    INT = 'int' # Integer (whole number)
+    CHAR = 'char' # Character (ASCII/Unicode)
+    BOOL = 'bool' # Boolean (true/false)
+    VOID = 'void' # Void (programmer-inaccessible)
 
 class Token:
     def __init__(self, type_: str, value: str = None, start: Position = None, end: Position = None) -> None:
@@ -534,6 +534,7 @@ class Parser:
         if token.full == (Tk.OP, '['):
             array = ArrayNode([])
             while self.token.full not in [(Tk.EOF), (Tk.OP, ']')]:
+                if self.token.full == (Tk.OP, ','): self.next()
                 element, error = self.expr()
                 array.array.append(element)
             self.next()
@@ -551,7 +552,7 @@ class Parser:
                 index = self.expr()
                 if self.token.full == (Tk.OP, ']'):
                     self.next()
-                    return ArrayAccessNode(token.value, index[0].value), None
+                    return ArrayAccessNode(token.value, index[0]), None
                 raise
             return IdentifierNode(token.value), None
         
@@ -634,8 +635,12 @@ class MemoryUsageList(InfiniteList):
     
     def allocate_array(self, size: int, type_: Type) -> int:
         array_found = self.get_array(size)
+        self.use(array_found, Type.VOID)
+        self.use(array_found + 1, Type.VOID)
+        self.use(array_found + 2, Type.VOID)
         for i in range(size):
-            self.use(array_found + i, type_)
+            self.use(array_found + i*2 + 3, type_)
+            self.use(array_found + i*2 + 4, Type.VOID)
         return array_found
 
 class Compiler:
@@ -643,7 +648,6 @@ class Compiler:
         self.mainnode = mainnode
     
     def compile(self) -> str:
-        # TODO: add self.arrays list for storing array positions and lengths
         self.aliases = {}
         self.arrays = {}
         self.literals = {}
@@ -695,6 +699,17 @@ class Compiler:
         
         if type(node) == BinaryOpNode:
             if node.token.full == (Tk.OP, '='):
+                # TODO: raise error when types do not match
+                if type(node.right) == ArrayNode:
+                    for i, subnode in enumerate(node.right.array):
+                        if type(subnode) == LiteralNode:
+                            result += self.move(self.arrays[node.left.array_title]['position'] + i*2 + 3)
+                            result += self.assign(subnode.value)
+                            continue
+                        result += self.visit(BinaryOpNode(AddressNode(self.arrays[node.left.array_title]['position'] + i*2 + 3), Token(Tk.OP, '='), subnode))
+                    result += self.move(self.arrays[node.left.array_title]['position'])
+                    return result
+                
                 temp0 = self.memory.allocate(Type.INT)
                 
                 result += self.visit(node.left)
@@ -702,7 +717,7 @@ class Compiler:
                 
                 result += self.visit(node.right)
                 right = self.pointer
-                
+
                 result += self.bf_parse('t0[-]x[-]y[x+t0+y-]t0[y+t0-]x',
                     t0 = temp0,
                     x  = left,
@@ -984,17 +999,17 @@ class Compiler:
             if node.token.full == (Tk.KW, 'input'):
                 return self.visit(node.args[0]) + self.input()
             
-            # TODO: implement arrays (int a[1] = [1])
             if node.token.type == Tk.KW and node.token.value in ['int', 'char', 'bool']:
                 # FIXME: code can likely be shortened significantly
                 # Checks if the identifier is an array, if the declaration has assignment, and the declaration type
 
-                # FIXME: throws an error if the declaration does not have assignment "="
+                # FIXME: currently throws an error if the declaration does not have assignment "="
+                # TODO: store datatype info in arrays
                 if type(node.args[0].left) == ArrayAccessNode:
                     if type(node.args[0]) == BinaryOpNode:
-                        array_size = node.args[0].left.index
+                        array_size = node.args[0].left.index.value
                     else:
-                        array_size = node.args[0].index
+                        array_size = node.args[0].index.value
 
                     if   node.token.value == 'int' : cell_found = self.memory.allocate_array(array_size, Type.INT)
                     elif node.token.value == 'char': cell_found = self.memory.allocate_array(array_size, Type.CHAR)
@@ -1039,7 +1054,21 @@ class Compiler:
         
         if type(node) == ArrayAccessNode:
             if node.array_title in self.arrays:
-                return self.move(self.arrays[node.array_title]['position'])
+                temp0 = self.memory.allocate(Type.INT)
+
+                result += self.visit(node.index) or ''
+                index = self.pointer
+
+                result += self.bf_parse('t0[-]s>>[-]<<i[s>>+<<t0+i-]t0[i+t0-]s>>+[-[+>>]+[<<]>>-]>>[[-]+>>]<[-<[<<]<<+>+>>>[>>]<]<[<<]<<[->>>>[>>]<+<[<<]<<]>>>>[>>]<<[[-]<<]',
+                    t0 = temp0,
+                    s = self.arrays[node.array_title]['position'],
+                    i = index
+                )
+                result += self.left(1)
+
+                self.memory.rmv(temp0)
+                return result
+
             raise RuntimeError('specified array has not been declared')
         
         if type(node) == IdentifierNode:
