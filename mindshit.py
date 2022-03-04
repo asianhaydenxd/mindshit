@@ -286,6 +286,38 @@ class Lexer:
         self.next()
         
         while self.char != None and self.char != quote_type:
+            if self.char == '\\':
+                self.next()
+                if   self.char == '\\': text_str += '\\'
+                elif self.char == "'": text_str += '\''
+                elif self.char == '"': text_str += '\"'
+                elif self.char == 'a': text_str += '\a'
+                elif self.char == 'b': text_str += '\b'
+                elif self.char == 'f': text_str += '\f'
+                elif self.char == 'n': text_str += '\n'
+                elif self.char == 'r': text_str += '\r'
+                elif self.char == 's': text_str += ' '
+                elif self.char == 't': text_str += '\t'
+                elif self.char == 'v': text_str += '\v'
+                elif self.char == 'x':
+                    self.next()
+                    num = ''
+                    while self.char in HEXDIGITS:
+                        num += self.char
+                        self.next()
+                    text_str += chr(int(num, 16))
+                    continue
+                elif self.char in OCTDIGITS:
+                    num = ''
+                    while self.char in OCTDIGITS:
+                        num += self.char
+                        self.next()
+                    text_str += chr(int(num, 8))
+                    continue
+                else: text_str += self.char
+                self.next()
+                continue
+            
             text_str += self.char
             self.next()
         
