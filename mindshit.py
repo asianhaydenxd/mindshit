@@ -1096,6 +1096,17 @@ class Compiler:
                     self.memory.rmv(*(temp_block + i for i in range(8)))
                     return result
 
+                if self.memory[self.pointer] == Type.BOOL:
+                    temp_block = self.memory.allocate_block(4, Type.CHAR)
+
+                    result += self.bf_parse('t[-]+>[-]<x[t>>>+++++++++++[<++++++++++>-]<++++++.--.+++.>++++[<---->-]<.[-]<<-x[t>+<x-]]t>[<x+t>-]<[>>>++++++++++[<++++++++++>-]<++.-----.+++++++++++.+++++++.>+++++[<--->-]<+.[-]<<-]',
+                        t = temp_block,
+                        x = self.pointer
+                    )
+
+                    self.memory.rmv(*(temp_block + i for i in range(4)))
+                    return result
+
                 raise TypeError(f'unsupported type {self.memory[self.pointer]}')
             
             if node.token.full == (Tk.KW, 'input'):
