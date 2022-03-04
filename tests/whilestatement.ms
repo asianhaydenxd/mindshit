@@ -3,10 +3,10 @@ int c = 0
 
 while i
     i -= 1
-    print(i + 48)
+    print(i)
     if i
         c += 1
     end
 end
 
-print(c + 48)
+print(c)
