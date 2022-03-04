@@ -1033,7 +1033,7 @@ class Compiler:
                     }
                     result += self.move(self.arrays[new_variable.array_title]['position'])
                 else:
-                    self.aliases[new_variable.title] = cell_found = self.memory.allocate(str_to_type[node.token.value])
+                    self.aliases[new_variable.title] = self.memory.allocate(str_to_type[node.token.value])
                     result += self.move(self.aliases[new_variable.title])
                     
                 result += self.visit(node.args[0])
