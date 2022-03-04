@@ -921,7 +921,25 @@ class Compiler:
                 self.memory.rmv(temp0, temp1, temp2, temp3)
                 return result
             
-            # TODO: implement modulus
+            if node.token.full == (Tk.OP, '%'):
+                returned = self.memory.allocate(Type.INT)
+                temp_block = self.memory.allocate_block(6, Type.INT)
+
+                result += self.visit(node.left)
+                left = self.pointer
+                
+                result += self.visit(node.right)
+                right = self.pointer
+
+                result += self.bf_parse('x[-t+>+<x]t[-x+t] y[-t+>>+<<y]t[-y+t]>[>->+<[>]>[<+>-]<<[<]>-]>[-]>>[-<<<r+t>>>]r',
+                    t = temp_block,
+                    r = returned,
+                    x = left,
+                    y = right,
+                )
+
+                self.memory.rmv(*(temp_block + i for i in range(6)))
+                return result
             
             if node.token.full == (Tk.OP, '=='):
                 returned, temp0, temp1 = self.memory.allocate(Type.BOOL, Type.INT, Type.INT)
