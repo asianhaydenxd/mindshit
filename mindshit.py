@@ -987,14 +987,19 @@ class Compiler:
         
         if type(node) == FunctionOpNode:
             if node.token.full == (Tk.KW, 'print'):
-                # FIXME: weird formatting, needs extensive testing
+                result += self.visit(node.args[0])
+
                 if type(node.args[0]) == ArrayNode:
-                    result += self.visit(node.args[0])
+                    result += self.right(3)
                     for _ in range(len(node.args[0].array) + 1):
                         result += self.output()
-                        result += self.args[0](1)
+                        result += self.right(2)
                     return result
-                return self.visit(node.args[0]) + self.output()
+
+                if self.memory[self.pointer] == Type.CHAR:
+                    return self.output()
+
+                raise TypeError(f'unsupported type {self.memory[self.pointer]}')
             
             if node.token.full == (Tk.KW, 'input'):
                 return self.visit(node.args[0]) + self.input()
