@@ -23,10 +23,11 @@ def evaluate(code, returning: bool = False, default_input: str = ''):
     code = cleanup(list(code))
     bracemap = buildbracemap(code)
 
-    cells, codeptr, cellptr, inputchars = [0], 0, 0, list(default_input).reverse() if default_input else []
+    cells, codeptr, cellptr, operations, inputchars = [0], 0, 0, 0, list(default_input).reverse() if default_input else []
 
     while codeptr < len(code):
         command = code[codeptr]
+        operations += 1
 
         if command == ">":
             cellptr += 1
@@ -87,8 +88,14 @@ def buildbracemap(code):
     return bracemap
 
 def main():
-    if len(sys.argv) == 2:
-        execute(sys.argv[1])
+    if len(sys.argv) >= 2:
+        if sys.argv[1] in ('--code', '-c'):
+            if len(sys.argv) >= 3:
+                evaluate(sys.argv[2])
+            else:
+                print(f'No code given after {sys.argv[1]}')
+        else:
+            execute(sys.argv[1])
     else:
         print("Usage:", sys.argv[0], "filename")
 
