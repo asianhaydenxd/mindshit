@@ -508,7 +508,7 @@ class Parser:
             return LiteralNode(ord(token.value), Type.CHAR), None
         
         if token.type == Tk.STR:
-            return ArrayNode([LiteralNode(ord(char)) for char in token.value]), None
+            return ArrayNode([LiteralNode(ord(char), Type.CHAR) for char in token.value]), None
 
         if token.full == (Tk.KW, 'true'):
             return LiteralNode(1, Type.BOOL), None
@@ -1057,10 +1057,10 @@ class Compiler:
             array_address = self.memory.allocate_array(len(node.array), Type.INT)
             for i, subnode in enumerate(node.array):
                 if type(subnode) == LiteralNode:
-                    result += self.move(array_address + i)
+                    result += self.move(array_address + i*2 + 3)
                     result += self.assign(subnode.value)
                     continue
-                result += self.visit(BinaryOpNode(AddressNode(array_address + i), Token(Tk.OP, '='), subnode))
+                result += self.visit(BinaryOpNode(AddressNode(array_address + i*2 + 3), Token(Tk.OP, '='), subnode))
             result += self.move(array_address)
             return result
     
