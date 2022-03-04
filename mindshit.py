@@ -1008,8 +1008,10 @@ class Compiler:
                 
                 if self.memory[self.pointer] == Type.INT:
                     temp_block = self.memory.allocate_block(8, Type.VOID)
-                    result += self.bf_parse('x[-t+x]t>[-]>[-]+>[-]+<[>[-<-<<[->+>+<<]>[-<+>]>>]++++++++++>[-]+>[-]>[-]>[-]<<<<<[->-[>+>>]>[[-<+>]+>+>>]<<<<<]>>-[-<<+>>]<[-]++++++++[-<++++++>]>>[-<<+>>]<<]<[.[-]<]>++++[<++++++++>-]<.[-]<',
-                        t = temp_block,
+                    temp = self.memory.allocate(Type.INT)
+                    result += self.bf_parse('t0[-]tb[-]x[-t0+tb+x]t0[-x+t0]tb>[-]>[-]+>[-]+<[>[-<-<<[->+>+<<]>[-<+>]>>]++++++++++>[-]+>[-]>[-]>[-]<<<<<[->-[>+>>]>[[-<+>]+>+>>]<<<<<]>>-[-<<+>>]<[-]++++++++[-<++++++>]>>[-<<+>>]<<]<[.[-]<]<',
+                        tb = temp_block,
+                        t0 = temp,
                         x = self.pointer
                     )
 
