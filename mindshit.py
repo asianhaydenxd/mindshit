@@ -634,7 +634,7 @@ class MemoryUsageList(InfiniteList):
         return tuple(cells)
     
     def allocate_array(self, size: int, type_: Type) -> int:
-        array_found = self.get_array(size)
+        array_found = self.get_array(size*2 + 3)
         self.use(array_found, Type.VOID)
         self.use(array_found + 1, Type.VOID)
         self.use(array_found + 2, Type.VOID)
@@ -642,6 +642,12 @@ class MemoryUsageList(InfiniteList):
             self.use(array_found + i*2 + 3, type_)
             self.use(array_found + i*2 + 4, Type.VOID)
         return array_found
+    
+    def allocate_block(self, size: int, type_: Type) -> int:
+        block_found = self.get_array(size)
+        for i in range(size):
+            self.use(block_found + i, type_)
+        return block_found
 
 class Compiler:
     def __init__(self, mainnode) -> None:
@@ -997,7 +1003,18 @@ class Compiler:
                     return result
 
                 if self.memory[self.pointer] == Type.CHAR:
-                    return self.output()
+                    result += self.output()
+                    return result
+                
+                if self.memory[self.pointer] == Type.INT:
+                    temp_block = self.memory.allocate_block(8, Type.VOID)
+                    result += self.bf_parse('x[-t+x]t>[-]>[-]+>[-]+<[>[-<-<<[->+>+<<]>[-<+>]>>]++++++++++>[-]+>[-]>[-]>[-]<<<<<[->-[>+>>]>[[-<+>]+>+>>]<<<<<]>>-[-<<+>>]<[-]++++++++[-<++++++>]>>[-<<+>>]<<]<[.[-]<]>++++[<++++++++>-]<.[-]<',
+                        t = temp_block,
+                        x = self.pointer
+                    )
+
+                    self.memory.rmv(*(temp_block + i for i in range(8)))
+                    return result
 
                 raise TypeError(f'unsupported type {self.memory[self.pointer]}')
             
