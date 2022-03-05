@@ -307,6 +307,22 @@ class Lexer:
                         self.next()
                     text_str += chr(int(num, 16))
                     continue
+                elif self.char == 'd':
+                    self.next()
+                    num = ''
+                    while self.char in DIGITS:
+                        num += self.char
+                        self.next()
+                    text_str += chr(int(num, 10))
+                    continue
+                elif self.char == 'B':
+                    self.next()
+                    num = ''
+                    while self.char in ['0', '1']:
+                        num += self.char
+                        self.next()
+                    text_str += chr(int(num, 2))
+                    continue
                 elif self.char in OCTDIGITS:
                     num = ''
                     while self.char in OCTDIGITS:
