@@ -11,6 +11,8 @@ Node = TypeVar('Node')
 DIGITS = '0123456789'
 LETTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZŠŒŽšœžŸÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþ'
 WHITESPACE = ' \t\n'
+OCTDIGITS = '01234567'
+HEXDIGITS = '0123456789ABCDEF'
 
 # Position
 class Position:
