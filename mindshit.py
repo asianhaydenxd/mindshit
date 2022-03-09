@@ -683,16 +683,6 @@ class MemoryUsageList(InfiniteList):
             cells.append(cell_found)
         return tuple(cells)
     
-    def allocate_array(self, size: int, type_: Type) -> int:
-        array_found = self.get_array(size*2 + 3)
-        self.use(array_found, Type.VOID)
-        self.use(array_found + 1, Type.VOID)
-        self.use(array_found + 2, Type.VOID)
-        for i in range(size):
-            self.use(array_found + i*2 + 3, type_)
-            self.use(array_found + i*2 + 4, Type.VOID)
-        return array_found
-    
     def allocate_block(self, size: int, type_: Type) -> int:
         block_found = self.get_array(size)
         for i in range(size):
@@ -759,10 +749,10 @@ class Compiler:
                 if type(node.right) == ArrayNode:
                     for i, subnode in enumerate(node.right.array):
                         if type(subnode) == LiteralNode:
-                            result += self.move(self.arrays[node.left.array_title]['position'] + i*2 + 3)
+                            result += self.move(self.arrays[node.left.array_title]['position'] + i)
                             result += self.assign(subnode.value)
                             continue
-                        result += self.visit(BinaryOpNode(AddressNode(self.arrays[node.left.array_title]['position'] + i*2 + 3), Token(Tk.OP, '='), subnode))
+                        result += self.visit(BinaryOpNode(AddressNode(self.arrays[node.left.array_title]['position'] + i), Token(Tk.OP, '='), subnode))
                     result += self.move(self.arrays[node.left.array_title]['position'])
                     return result
                 
@@ -1142,10 +1132,9 @@ class Compiler:
                 result += self.visit(node.args[0])
 
                 if type(node.args[0]) == ArrayNode:
-                    result += self.right(3)
                     for _ in range(len(node.args[0].array) + 1):
                         result += self.output()
-                        result += self.right(2)
+                        result += self.right()
                     return result
 
                 if self.memory[self.pointer] == Type.CHAR:
@@ -1180,13 +1169,14 @@ class Compiler:
             if node.token.full == (Tk.KW, 'input'):
                 return self.visit(node.args[0]) + self.input()
             
+            # FIXME: detect types automatically (including arrays) and rather replace everything with keyword let
             if node.token.type == Tk.KW and node.token.value in ['int', 'char', 'bool']:
                 str_to_type = {'int': Type.INT, 'char': Type.CHAR, 'bool': Type.BOOL}
                 new_variable = node.args[0].left if type(node.args[0]) == BinaryOpNode else node.args[0]
 
                 if type(new_variable) == ArrayAccessNode:
                     self.arrays[new_variable.array_title] = {
-                        'position': self.memory.allocate_array(new_variable.index.value, str_to_type[node.token.value]),
+                        'position': self.memory.allocate_block(new_variable.index.value, str_to_type[node.token.value]),
                         'size': new_variable.index.value,
                         'type': str_to_type[node.token.value]
                     }
@@ -1204,6 +1194,14 @@ class Compiler:
             return self.move(node.address)
         
         if type(node) == ArrayAccessNode:
+            # FIXME: arrays have been reformatted to concise blocks of values.
+            #        in order to access variable indices, the former method
+            #        of storing arrays must be recreated as a temporary block
+            #        which will just return its own value, followed by deletion
+            #        of such block.
+            #           FORMER STORAGE: [0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0]
+            #           NEW STORAGE: [1, 2, 3, 4]
+
             if node.array_title in self.arrays:
                 temp0 = self.memory.allocate(Type.INT)
 
@@ -1235,13 +1233,13 @@ class Compiler:
         
         if type(node) == ArrayNode:
             # TODO: specifiy array types
-            array_address = self.memory.allocate_array(len(node.array), Type.INT)
+            array_address = self.memory.allocate_block(len(node.array), Type.INT)
             for i, subnode in enumerate(node.array):
                 if type(subnode) == LiteralNode:
-                    result += self.move(array_address + i*2 + 3)
+                    result += self.move(array_address + i)
                     result += self.assign(subnode.value)
                     continue
-                result += self.visit(BinaryOpNode(AddressNode(array_address + i*2 + 3), Token(Tk.OP, '='), subnode))
+                result += self.visit(BinaryOpNode(AddressNode(array_address + i), Token(Tk.OP, '='), subnode))
             result += self.move(array_address)
             return result
     
@@ -1286,18 +1284,18 @@ class Compiler:
     def assign(self, value_target: int) -> str:
         return '[-]' + '+' * value_target
 
-    def right(self, address_increment: int) -> str:
+    def right(self, address_increment: int = 1) -> str:
         self.pointer += address_increment if address_increment != None else 1
         return '>' * address_increment
 
-    def left(self, address_decrement: int) -> str:
+    def left(self, address_decrement: int = 1) -> str:
         self.pointer -= address_decrement if address_decrement != None else 1
         return '<' * address_decrement
 
-    def add(self, value_increment: int) -> str:
+    def add(self, value_increment: int = 1) -> str:
         return '+' * value_increment if value_increment != None else 1
 
-    def sub(self, value_decrement: int) -> str:
+    def sub(self, value_decrement: int = 1) -> str:
         return '-' * value_decrement if value_decrement != None else 1
 
     def output(self, output_address: int = None) -> str:
