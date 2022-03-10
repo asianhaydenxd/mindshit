@@ -703,403 +703,76 @@ class Compiler:
     
     def visit(self, node) -> None:
         result = ''
-        
+
+        # TODO: extract node compilers into separate functions (with left and right params)
         if type(node) == DoNode:
-            for child in node.body:
-                result += self.visit(child)
-            return result
+            return self.visit_do(node)
         
         if type(node) == ConditionalNode:
             if node.token.full == (Tk.KW, 'while'):
-                temp0, temp1 = self.memory.allocate(Type.INT, Type.INT)
-                
-                result += self.bf_parse('x[b0x]r_b0',
-                    t0 = temp0,
-                    x  = [BinaryOpNode(AddressNode(temp1), Token(Tk.OP, '='), node.condition)],
-                    b0 = node.body,
-                )
-                
-                self.memory.rmv(temp0, temp1)
-                return result
+                return self.visit_while(node.condition, node.body)
             
             if node.token.full in [(Tk.KW, 'if'), (Tk.KW, 'elif')]:
-                returned, temp0, temp1, temp2 = self.memory.allocate(Type.BOOL, Type.INT, Type.INT, Type.INT)
-                
-                result += self.visit(node.condition)
-                condition = self.pointer
-                
-                result += self.bf_parse('t0[-]+t1[-]x[b0t2[-]rv[-]r_b0[rv+t2+r_b0-]t2[r_b0+t2-]t0-x[t1+x-]]t1[x+t1-]t0[b1t2[-]rv[-]r_b1[rv+t2+r_b1-]t2[r_b1+t2-]t0-]rv',
-                    #                                   \=====================================/                          \=====================================/
-                    #                                       Set return value to if's return                                 Set return value to else's return
-                    t0 = temp0,
-                    t1 = temp1,
-                    t2 = temp2,
-                    x  = condition,
-                    b0 = node.body,
-                    b1 = node.elsebody,
-                    rv = returned,
-                )
-                
-                self.memory.rmv(temp0, temp1, temp2)
-                return result
+                return self.visit_if(node.condition, node.body, node.elsebody)
         
         if type(node) == BinaryOpNode:
             if node.token.full == (Tk.OP, '='):
                 # TODO: raise error when types do not match
                 if type(node.right) == ArrayNode:
-                    for i, subnode in enumerate(node.right.array):
-                        if type(subnode) == LiteralNode:
-                            result += self.move(self.arrays[node.left.array_title]['position'] + i)
-                            result += self.assign(subnode.value)
-                            continue
-                        result += self.visit(BinaryOpNode(AddressNode(self.arrays[node.left.array_title]['position'] + i), Token(Tk.OP, '='), subnode))
-                    result += self.move(self.arrays[node.left.array_title]['position'])
-                    return result
+                    return self.visit_array_assign(node.left, node.right)
                 
-                temp0 = self.memory.allocate(Type.INT)
-                
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-
-                result += self.bf_parse('t0[-]x[-]y[x+t0+y-]t0[y+t0-]x',
-                    t0 = temp0,
-                    x  = left,
-                    y  = right,
-                )
-                
-                self.memory.rmv(temp0)
-                return result
+                return self.visit_assign(node.left, node.right)
                     
             if node.token.full == (Tk.OP, '+='):
-                temp0 = self.memory.allocate(Type.INT)
-                
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-                
-                result += self.bf_parse('t0[-]y[x+t0+y-]t0[y+t0-]x',
-                    t0 = temp0,
-                    x  = left,
-                    y  = right,
-                )
-                
-                self.memory.rmv(temp0)
-                return result
+                return self.visit_add_assign(node.left, node.right)
                     
             if node.token.full == (Tk.OP, '-='):
-                temp0 = self.memory.allocate(Type.INT)
-                
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-                
-                result += self.bf_parse('t0[-]y[x-t0+y-]t0[y+t0-]x',
-                    t0 = temp0,
-                    x  = left,
-                    y  = right,
-                )
-                
-                self.memory.rmv(temp0)
-                return result
+                return self.visit_subtract_assign(node.left, node.right)
             
             if node.token.full == (Tk.OP, '*='):
-                temp0, temp1 = self.memory.allocate(Type.INT, Type.INT)
-                
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-                
-                result += self.bf_parse('t0[-]t1[-]x[t1+x-]t1[y[x+t0+y-]t0[y+t0-]t1-]x',
-                    t0 = temp0,
-                    t1 = temp1,
-                    x  = left,
-                    y  = right,
-                )
-                
-                self.memory.rmv(temp0, temp1)
-                return result
+                return self.visit_multiply_assign(node.left, node.right)
             
             if node.token.full == (Tk.OP, '/='):
-                temp0, temp1, temp2, temp3 = self.memory.allocate(Type.INT, Type.INT, Type.INT, Type.INT)
-                
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-                
-                result += self.bf_parse('t0[-]t1[-]t2[-]t3[-]x[t0+x-]t0[y[t1+t2+y-]t2[y+t2-]t1[t2+t0-[t2[-]t3+t0-]t3[t0+t3-]t2[t1-[x-t1[-]]+t2-]t1-]x+t0]x',
-                    t0 = temp0,
-                    t1 = temp1,
-                    t2 = temp2,
-                    t3 = temp3,
-                    x  = left,
-                    y  = right,
-                )
-                
-                self.memory.rmv(temp0, temp1, temp2, temp3)
-                return result
+                return self.visit_divide_assign(node.left, node.right)
 
             if node.token.full == (Tk.OP, '<-'):
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-                
-                result += self.bf_parse('x[-]y[x+y-]x',
-                    x = left,
-                    y = right,
-                )
-                
-                return result
+                return self.visit_relocate(node.left, node.right)
             
             if node.token.full == (Tk.OP, '<->'):
-                temp0 = self.memory.allocate(Type.INT)
-                
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-                
-                result += self.bf_parse('t0[-]x[t0+x-]y[x+y-]t0[y+t0-]x',
-                    t0 = temp0,
-                    x = left,
-                    y = right,
-                )
-                
-                self.memory.rmv(temp0)
-                return result
+                return self.visit_swap(node.left, node.right)
             
             if node.token.full == (Tk.OP, '+'):
-                returned, temp0 = self.memory.allocate(Type.INT, Type.INT)
-                
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-                
-                result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t0[-]y[r+t0+y-]t0[y+t0-]r',
-                    t0 = temp0,
-                    r  = returned,
-                    x  = left,
-                    y  = right,
-                )
-                
-                self.memory.rmv(temp0)
-                return result
+                return self.visit_op_add(node.left, node.right)
             
             if node.token.full == (Tk.OP, '-'):
-                returned, temp0 = self.memory.allocate(Type.INT, Type.INT)
-                
-                result = self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-                
-                result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t0[-]y[r-t0+y-]t0[y+t0-]r',
-                    t0 = temp0,
-                    r  = returned,
-                    x  = left,
-                    y  = right,
-                )
-                
-                self.memory.rmv(temp0)
-                return result
+                return self.visit_op_subtract(node.left, node.right)
             
             if node.token.full == (Tk.OP, '*'):
-                returned, temp0, temp1 = self.memory.allocate(Type.INT, Type.INT, Type.INT)
-                
-                result = self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-                
-                result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t0[-]t1[-]r[t1+r-]t1[y[r+t0+y-]t0[y+t0-]t1-]r',
-                    t0 = temp0,
-                    t1 = temp1,
-                    r  = returned,
-                    x  = left,
-                    y  = right,
-                )
-                
-                self.memory.rmv(temp0, temp1)
-                return result
+                return self.visit_op_multiply(node.left, node.right)
             
             if node.token.full == (Tk.OP, '/'):
-                returned, temp0, temp1, temp2, temp3 = self.memory.allocate(Type.INT, Type.INT, Type.INT, Type.INT, Type.INT)
-                
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-                
-                result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t0[-]t1[-]t2[-]t3[-]r[t0+r-]t0[y[t1+t2+y-]t2[y+t2-]t1[t2+t0-[t2[-]t3+t0-]t3[t0+t3-]t2[t1-[r-t1[-]]+t2-]t1-]r+t0]r',
-                    t0 = temp0,
-                    t1 = temp1,
-                    t2 = temp2,
-                    t3 = temp3,
-                    r = returned,
-                    x  = left,
-                    y  = right,
-                )
-                
-                self.memory.rmv(temp0, temp1, temp2, temp3)
-                return result
+                return self.visit_op_divide(node.left, node.right)
             
             if node.token.full == (Tk.OP, '%'):
-                returned = self.memory.allocate(Type.INT)
-                temp_block = self.memory.allocate_block(6, Type.INT)
-
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-
-                result += self.bf_parse('x[-t+>+<x]t[-x+t] y[-t+>>+<<y]t[-y+t]>[>->+<[>]>[<+>-]<<[<]>-]>[-]>>[-<<<r+t>>>]r',
-                    t = temp_block,
-                    r = returned,
-                    x = left,
-                    y = right,
-                )
-
-                self.memory.rmv(*(temp_block + i for i in range(6)))
-                return result
+                return self.visit_op_modulus(node.left, node.right)
             
             if node.token.full == (Tk.OP, '=='):
-                returned, temp0, temp1 = self.memory.allocate(Type.BOOL, Type.INT, Type.INT)
-                
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-                
-                result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t1[-]r[t1+r-]+y[t1-t0+y-]t0[y+t0-]t1[r-t1[-]]r',
-                    t0 = temp0,
-                    t1 = temp1,
-                    r  = returned,
-                    x  = left,
-                    y  = right,
-                )
-                
-                self.memory.rmv(temp0, temp1)
-                return result
+                return self.visit_op_equal(node.left, node.right)
             
             if node.token.full == (Tk.OP, '!='):
-                returned, temp0, temp1 = self.memory.allocate(Type.BOOL, Type.INT, Type.INT)
-                
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-                
-                result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t1[-]r[t1+r-]y[t1-t0+y-]t0[y+t0-]t1[r+t1[-]]r',
-                    t0 = temp0,
-                    t1 = temp1,
-                    r  = returned,
-                    x  = left,
-                    y  = right,
-                )
-                
-                self.memory.rmv(temp0, temp1)
-                return result
+                return self.visit_op_notequal(node.left, node.right)
 
             if node.token.full == (Tk.OP, '<'):
-                temp_block = self.memory.allocate_block(5, Type.VOID)
-                returned = self.memory.allocate(Type.BOOL)
-
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-
-                result += self.bf_parse('r[-]t[-]x[-r+t+x]t[-x+t]t>[-]>[-]+>[-]<<<y[t+>+<y-]t[y+t-]r[t+r-]+t>[>-]>[<r-t[-]>>->]<+<<[>-[>-]>[<<r-t[-]+>>->]<+<<-]r',
-                    t = temp_block,
-                    r = returned,
-                    x = left,
-                    y = right,
-                )
-
-                self.memory.rmv(*(temp_block + i for i in range(5)))
-                return result
+                return self.visit_op_less(node.left, node.right)
             
             if node.token.full == (Tk.OP, '<='):
-                temp_block = self.memory.allocate_block(5, Type.VOID)
-                returned = self.memory.allocate(Type.BOOL)
-
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-
-                result += self.bf_parse('r[-]t[-]x[-r+t+x]t[-x+t]t>[-]>[-]+>[-]<<<y[t+>+<y-]t>[<y+t>-]<r[t>+<r-]t>[>-]>[<r+t[-]>>->]<+<<[>-[>-]>[<<r+t[-]+>>->]<+<<-]r',
-                    t = temp_block,
-                    r = returned,
-                    x = left,
-                    y = right,
-                )
-
-                self.memory.rmv(*(temp_block + i for i in range(5)))
-                return result
+                return self.visit_op_lessequal(node.left, node.right)
             
             if node.token.full == (Tk.OP, '>'):
-                temp_block = self.memory.allocate_block(5, Type.VOID)
-                returned = self.memory.allocate(Type.BOOL)
-
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-
-                result += self.bf_parse('r[-]t[-]y[-r+t+y]t[-y+t]t>[-]>[-]+>[-]<<<x[t+>+<x-]t[x+t-]r[t+r-]+t>[>-]>[<r-t[-]>>->]<+<<[>-[>-]>[<<r-t[-]+>>->]<+<<-]r',
-                    t = temp_block,
-                    r = returned,
-                    x = left,
-                    y = right,
-                )
-
-                self.memory.rmv(*(temp_block + i for i in range(5)))
-                return result
+                return self.visit_op_greater(node.left, node.right)
             
             if node.token.full == (Tk.OP, '>='):
-                temp_block = self.memory.allocate_block(5, Type.VOID)
-                returned = self.memory.allocate(Type.BOOL)
-
-                result += self.visit(node.left)
-                left = self.pointer
-                
-                result += self.visit(node.right)
-                right = self.pointer
-
-                result += self.bf_parse('r[-]t[-]y[-r+t+y]t[-y+t]t>[-]>[-]+>[-]<<<x[t+>+<x-]t>[<x+t>-]<r[t>+<r-]t>[>-]>[<r+t[-]>>->]<+<<[>-[>-]>[<<r+t[-]+>>->]<+<<-]r',
-                    t = temp_block,
-                    r = returned,
-                    x = left,
-                    y = right,
-                )
-
-                self.memory.rmv(*(temp_block + i for i in range(5)))
-                return result
+                return self.visit_op_greaterthan(node.left, node.right)
                 
             if node.token.full == (Tk.OP, ':'):
                 if type(node.left) == IdentifierNode:
@@ -1113,111 +786,33 @@ class Compiler:
         
         if type(node) == UnaryOpNode:            
             if node.token.full == (Tk.KW, 'not'):
-                temp0, returned = self.memory.allocate(Type.INT, Type.BOOL)
-                
-                result += self.visit(node.right)
-                right = self.pointer
-                
-                result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]r-[t0-r-]t0[r+t0-]r',
-                    t0 = temp0,
-                    r  = returned,
-                    x  = right,
-                )
-                
-                self.memory.rmv(temp0)
-                return result
+                return self.visit_op_not(node.right)
         
         if type(node) == FunctionOpNode:
             if node.token.full == (Tk.KW, 'print'):
-                result += self.visit(node.args[0])
-
-                if type(node.args[0]) == ArrayNode:
-                    for value in node.args[0].array:
-                        result += self.visit(FunctionOpNode(Token(Tk.KW, 'print'), [value]))
-                        
-                        result += self.right()
-                    return result
-
-                if self.memory[self.pointer] == Type.CHAR:
-                    result += self.output()
-                    return result
-                
-                if self.memory[self.pointer] == Type.INT:
-                    temp_block = self.memory.allocate_block(8, Type.VOID)
-                    temp = self.memory.allocate(Type.INT)
-                    result += self.bf_parse('t0[-]tb[-]x[-t0+tb+x]t0[-x+t0]tb>[-]>[-]+>[-]+<[>[-<-<<[->+>+<<]>[-<+>]>>]++++++++++>[-]+>[-]>[-]>[-]<<<<<[->-[>+>>]>[[-<+>]+>+>>]<<<<<]>>-[-<<+>>]<[-]++++++++[-<++++++>]>>[-<<+>>]<<]<[.[-]<]<x',
-                        tb = temp_block,
-                        t0 = temp,
-                        x = self.pointer
-                    )
-
-                    self.memory.rmv(*(temp_block + i for i in range(8)))
-                    return result
-
-                if self.memory[self.pointer] == Type.BOOL:
-                    temp_block = self.memory.allocate_block(4, Type.CHAR)
-
-                    result += self.bf_parse('t[-]+>[-]<x[t>>>+++++++++++[<++++++++++>-]<++++++.--.+++.>++++[<---->-]<.[-]<<-x[t>+<x-]]t>[<x+t>-]<[>>>++++++++++[<++++++++++>-]<++.-----.+++++++++++.+++++++.>+++++[<--->-]<+.[-]<<-]',
-                        t = temp_block,
-                        x = self.pointer
-                    )
-
-                    self.memory.rmv(*(temp_block + i for i in range(4)))
-                    return result
+                return self.visit_print(node.args[0])
 
                 raise TypeError(f'unsupported type {self.memory[self.pointer]}')
             
             if node.token.full == (Tk.KW, 'input'):
+                # TODO: take multi-character input
                 return self.visit(node.args[0]) + self.input()
             
             # FIXME: detect types automatically (including arrays) and rather replace everything with keyword let
             if node.token.type == Tk.KW and node.token.value in ['int', 'char', 'bool']:
-                str_to_type = {'int': Type.INT, 'char': Type.CHAR, 'bool': Type.BOOL}
-                new_variable = node.args[0].left if type(node.args[0]) == BinaryOpNode else node.args[0]
-
-                if type(new_variable) == ArrayAccessNode:
-                    self.arrays[new_variable.array_title] = {
-                        'position': self.memory.allocate_block(new_variable.index.value, str_to_type[node.token.value]),
-                        'size': new_variable.index.value,
-                        'type': str_to_type[node.token.value]
-                    }
-                    result += self.move(self.arrays[new_variable.array_title]['position'])
-                else:
-                    self.aliases[new_variable.title] = self.memory.allocate(str_to_type[node.token.value])
-                    result += self.move(self.aliases[new_variable.title])
-                    
-                result += self.visit(node.args[0])
-                return result
+                return self.visit_var_declaration(node.token.value, node.args[0])
             
             raise RuntimeError('unary operator not defined in compiler')
         
         if type(node) == AddressNode:
             return self.move(node.address)
+
+        if type(node) == int:
+            return self.move(node)
         
         if type(node) == ArrayAccessNode:
-            # FIXME: arrays have been reformatted to concise blocks of values.
-            #        in order to access variable indices, the former method
-            #        of storing arrays must be recreated as a temporary block
-            #        which will just return its own value, followed by deletion
-            #        of such block.
-            #           FORMER STORAGE: [0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0]
-            #           NEW STORAGE: [1, 2, 3, 4]
-
             if node.array_title in self.arrays:
-                temp0 = self.memory.allocate(Type.INT)
-
-                result += self.visit(node.index) or ''
-                index = self.pointer
-
-                result += self.bf_parse('t0[-]s>>[-]<<i[s>>+<<t0+i-]t0[i+t0-]s>>+[-[+>>]+[<<]>>-]>>[[-]+>>]<[-<[<<]<<+>+>>>[>>]<]<[<<]<<[->>>>[>>]<+<[<<]<<]>>>>[>>]<<[[-]<<]',
-                    t0 = temp0,
-                    s = self.arrays[node.array_title]['position'],
-                    i = index
-                )
-                result += self.left(1)
-
-                self.memory.rmv(temp0)
-                return result
+                return self.visit_array_access(right)
 
             raise RuntimeError('specified array has not been declared')
         
@@ -1233,21 +828,583 @@ class Compiler:
             return self.move(cell_found) + self.assign(node.value)
         
         if type(node) == ArrayNode:
-            # TODO: specifiy array types
-            array_address = self.memory.allocate_block(len(node.array), Type.INT)
-            for i, subnode in enumerate(node.array):
-                if type(subnode) == LiteralNode:
-                    result += self.move(array_address + i)
-                    result += self.assign(subnode.value)
-                    continue
-                result += self.visit(BinaryOpNode(AddressNode(array_address + i), Token(Tk.OP, '='), subnode))
-            result += self.move(array_address)
-            return result
+            return self.visit_array_literal(node.array)
+    
+    def visit_do(self, node) -> None:
+        result = ''
+        for child in node.body:
+            result += self.visit(child)
+        return result
+
+    def visit_while(self, condition, body) -> None:
+        result = ''
+
+        temp0, temp1 = self.memory.allocate(Type.INT, Type.INT)
+        
+        result += self.bf_parse('x[b0x]r_b0',
+            t0 = temp0,
+            x  = lambda: self.visit_assign(temp1, condition),
+            b0 = body,
+        )
+        
+        self.memory.rmv(temp0, temp1)
+        return result
+    
+    def visit_if(self, condition, body, elsebody) -> None:
+        result = ''
+
+        returned, temp0, temp1, temp2 = self.memory.allocate(Type.BOOL, Type.INT, Type.INT, Type.INT)
+        
+        result += self.visit(condition)
+        condition = self.pointer
+        
+        result += self.bf_parse('t0[-]+t1[-]x[b0t2[-]rv[-]r_b0[rv+t2+r_b0-]t2[r_b0+t2-]t0-x[t1+x-]]t1[x+t1-]t0[b1t2[-]rv[-]r_b1[rv+t2+r_b1-]t2[r_b1+t2-]t0-]rv',
+            #                                   \=====================================/                          \=====================================/
+            #                                       Set return value to if's return                                 Set return value to else's return
+            t0 = temp0,
+            t1 = temp1,
+            t2 = temp2,
+            x  = condition,
+            b0 = body,
+            b1 = elsebody,
+            rv = returned,
+        )
+        
+        self.memory.rmv(temp0, temp1, temp2)
+        return result
+
+    def visit_assign(self, left, right) -> None:
+        result = ''
+
+        temp0 = self.memory.allocate(Type.INT)
+        
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+
+        result += self.bf_parse('t0[-]x[-]y[x+t0+y-]t0[y+t0-]x',
+            t0 = temp0,
+            x  = left,
+            y  = right,
+        )
+        
+        self.memory.rmv(temp0)
+        return result
+    
+    def visit_array_assign(self, left, right) -> None:
+        result = ''
+
+        for i, subnode in enumerate(right.array):
+            if type(subnode) == LiteralNode:
+                result += self.move(self.arrays[left.array_title]['position'] + i)
+                result += self.assign(subnode.value)
+                continue
+            result += self.visit_assign(self.arrays[left.array_title]['position'] + i, subnode)
+        result += self.move(self.arrays[left.array_title]['position'])
+        return result
+
+    def visit_add_assign(self, left, right) -> None:
+        result = ''
+
+        temp0 = self.memory.allocate(Type.INT)
+        
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+        
+        result += self.bf_parse('t0[-]y[x+t0+y-]t0[y+t0-]x',
+            t0 = temp0,
+            x  = left,
+            y  = right,
+        )
+        
+        self.memory.rmv(temp0)
+        return result
+    
+    def visit_subtract_assign(self, left, right) -> None:
+        result = ''
+
+        temp0 = self.memory.allocate(Type.INT)
+        
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+        
+        result += self.bf_parse('t0[-]y[x-t0+y-]t0[y+t0-]x',
+            t0 = temp0,
+            x  = left,
+            y  = right,
+        )
+        
+        self.memory.rmv(temp0)
+        return result
+
+    def visit_multiply_assign(self, left, right) -> None:
+        result = ''
+
+        temp0, temp1 = self.memory.allocate(Type.INT, Type.INT)
+        
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+        
+        result += self.bf_parse('t0[-]t1[-]x[t1+x-]t1[y[x+t0+y-]t0[y+t0-]t1-]x',
+            t0 = temp0,
+            t1 = temp1,
+            x  = left,
+            y  = right,
+        )
+        
+        self.memory.rmv(temp0, temp1)
+        return result
+
+    def visit_divide_assign(self, left, right) -> None:
+        result = ''
+
+        temp0, temp1, temp2, temp3 = self.memory.allocate(Type.INT, Type.INT, Type.INT, Type.INT)
+        
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+        
+        result += self.bf_parse('t0[-]t1[-]t2[-]t3[-]x[t0+x-]t0[y[t1+t2+y-]t2[y+t2-]t1[t2+t0-[t2[-]t3+t0-]t3[t0+t3-]t2[t1-[x-t1[-]]+t2-]t1-]x+t0]x',
+            t0 = temp0,
+            t1 = temp1,
+            t2 = temp2,
+            t3 = temp3,
+            x  = left,
+            y  = right,
+        )
+        
+        self.memory.rmv(temp0, temp1, temp2, temp3)
+        return result
+    
+    def visit_relocate(self, left, right) -> None:
+        result = ''
+
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+        
+        result += self.bf_parse('x[-]y[x+y-]x',
+            x = left,
+            y = right,
+        )
+        
+        return result
+    
+    def visit_swap(self, left, right) -> None:
+        result = ''
+
+        temp0 = self.memory.allocate(Type.INT)
+        
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+        
+        result += self.bf_parse('t0[-]x[t0+x-]y[x+y-]t0[y+t0-]x',
+            t0 = temp0,
+            x = left,
+            y = right,
+        )
+        
+        self.memory.rmv(temp0)
+        return result
+
+    def visit_op_add(self, left, right) -> None:
+        result = ''
+
+        returned, temp0 = self.memory.allocate(Type.INT, Type.INT)
+        
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+        
+        result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t0[-]y[r+t0+y-]t0[y+t0-]r',
+            t0 = temp0,
+            r  = returned,
+            x  = left,
+            y  = right,
+        )
+        
+        self.memory.rmv(temp0)
+        return result
+    
+    def visit_op_subtract(self, left, right) -> None:
+        result = ''
+
+        returned, temp0 = self.memory.allocate(Type.INT, Type.INT)
+        
+        result = self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+        
+        result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t0[-]y[r-t0+y-]t0[y+t0-]r',
+            t0 = temp0,
+            r  = returned,
+            x  = left,
+            y  = right,
+        )
+        
+        self.memory.rmv(temp0)
+        return result
+
+    def visit_op_multiply(self, left, right) -> None:
+        result = ''
+
+        returned, temp0, temp1 = self.memory.allocate(Type.INT, Type.INT, Type.INT)
+        
+        result = self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+        
+        result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t0[-]t1[-]r[t1+r-]t1[y[r+t0+y-]t0[y+t0-]t1-]r',
+            t0 = temp0,
+            t1 = temp1,
+            r  = returned,
+            x  = left,
+            y  = right,
+        )
+        
+        self.memory.rmv(temp0, temp1)
+        return result
+
+    def visit_op_divide(self, left, right) -> None:
+        result = ''
+
+        returned, temp0, temp1, temp2, temp3 = self.memory.allocate(Type.INT, Type.INT, Type.INT, Type.INT, Type.INT)
+        
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+        
+        result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t0[-]t1[-]t2[-]t3[-]r[t0+r-]t0[y[t1+t2+y-]t2[y+t2-]t1[t2+t0-[t2[-]t3+t0-]t3[t0+t3-]t2[t1-[r-t1[-]]+t2-]t1-]r+t0]r',
+            t0 = temp0,
+            t1 = temp1,
+            t2 = temp2,
+            t3 = temp3,
+            r = returned,
+            x  = left,
+            y  = right,
+        )
+        
+        self.memory.rmv(temp0, temp1, temp2, temp3)
+        return result
+    
+    def visit_op_modulus(self, left, right) -> None:
+        result = ''
+
+        returned = self.memory.allocate(Type.INT)
+        temp_block = self.memory.allocate_block(6, Type.INT)
+
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+
+        result += self.bf_parse('x[-t+>+<x]t[-x+t] y[-t+>>+<<y]t[-y+t]>[>->+<[>]>[<+>-]<<[<]>-]>[-]>>[-<<<r+t>>>]r',
+            t = temp_block,
+            r = returned,
+            x = left,
+            y = right,
+        )
+
+        self.memory.rmv(*(temp_block + i for i in range(6)))
+        return result
+
+    def visit_op_equal(self, left, right) -> None:
+        result = ''
+
+        returned, temp0, temp1 = self.memory.allocate(Type.BOOL, Type.INT, Type.INT)
+        
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+        
+        result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t1[-]r[t1+r-]+y[t1-t0+y-]t0[y+t0-]t1[r-t1[-]]r',
+            t0 = temp0,
+            t1 = temp1,
+            r  = returned,
+            x  = left,
+            y  = right,
+        )
+        
+        self.memory.rmv(temp0, temp1)
+        return result
+
+    def visit_op_notequal(self, left, right) -> None:
+        result = ''
+
+        returned, temp0, temp1 = self.memory.allocate(Type.BOOL, Type.INT, Type.INT)
+        
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+        
+        result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]t1[-]r[t1+r-]y[t1-t0+y-]t0[y+t0-]t1[r+t1[-]]r',
+            t0 = temp0,
+            t1 = temp1,
+            r  = returned,
+            x  = left,
+            y  = right,
+        )
+        
+        self.memory.rmv(temp0, temp1)
+        return result
+
+    def visit_op_less(self, left, right) -> None:
+        result = ''
+
+        temp_block = self.memory.allocate_block(5, Type.VOID)
+        returned = self.memory.allocate(Type.BOOL)
+
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+
+        result += self.bf_parse('r[-]t[-]x[-r+t+x]t[-x+t]t>[-]>[-]+>[-]<<<y[t+>+<y-]t[y+t-]r[t+r-]+t>[>-]>[<r-t[-]>>->]<+<<[>-[>-]>[<<r-t[-]+>>->]<+<<-]r',
+            t = temp_block,
+            r = returned,
+            x = left,
+            y = right,
+        )
+
+        self.memory.rmv(*(temp_block + i for i in range(5)))
+        return result
+
+    def visit_op_lessequal(self, left, right) -> None:
+        result = ''
+        
+        temp_block = self.memory.allocate_block(5, Type.VOID)
+        returned = self.memory.allocate(Type.BOOL)
+
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+
+        result += self.bf_parse('r[-]t[-]x[-r+t+x]t[-x+t]t>[-]>[-]+>[-]<<<y[t+>+<y-]t>[<y+t>-]<r[t>+<r-]t>[>-]>[<r+t[-]>>->]<+<<[>-[>-]>[<<r+t[-]+>>->]<+<<-]r',
+            t = temp_block,
+            r = returned,
+            x = left,
+            y = right,
+        )
+
+        self.memory.rmv(*(temp_block + i for i in range(5)))
+        return result
+
+    def visit_op_greater(self, left, right) -> None:
+        result = ''
+
+        temp_block = self.memory.allocate_block(5, Type.VOID)
+        returned = self.memory.allocate(Type.BOOL)
+
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+
+        result += self.bf_parse('r[-]t[-]y[-r+t+y]t[-y+t]t>[-]>[-]+>[-]<<<x[t+>+<x-]t[x+t-]r[t+r-]+t>[>-]>[<r-t[-]>>->]<+<<[>-[>-]>[<<r-t[-]+>>->]<+<<-]r',
+            t = temp_block,
+            r = returned,
+            x = left,
+            y = right,
+        )
+
+        self.memory.rmv(*(temp_block + i for i in range(5)))
+        return result
+
+    def visit_op_greaterthan(self, left, right) -> None:
+        result = ''
+
+        temp_block = self.memory.allocate_block(5, Type.VOID)
+        returned = self.memory.allocate(Type.BOOL)
+
+        result += self.visit(left)
+        left = self.pointer
+        
+        result += self.visit(right)
+        right = self.pointer
+
+        result += self.bf_parse('r[-]t[-]y[-r+t+y]t[-y+t]t>[-]>[-]+>[-]<<<x[t+>+<x-]t>[<x+t>-]<r[t>+<r-]t>[>-]>[<r+t[-]>>->]<+<<[>-[>-]>[<<r+t[-]+>>->]<+<<-]r',
+            t = temp_block,
+            r = returned,
+            x = left,
+            y = right,
+        )
+
+        self.memory.rmv(*(temp_block + i for i in range(5)))
+        return result
+
+    def visit_op_not(self, right) -> None:
+        result = ''
+
+        temp0, returned = self.memory.allocate(Type.INT, Type.BOOL)
+        
+        result += self.visit(node.right)
+        right = self.pointer
+        
+        result += self.bf_parse('t0[-]r[-]x[r+t0+x-]t0[x+t0-]r-[t0-r-]t0[r+t0-]r',
+            t0 = temp0,
+            r  = returned,
+            x  = right,
+        )
+        
+        self.memory.rmv(temp0)
+        return result
+    
+    def visit_print(self, right) -> None:
+        if type(right) == ArrayNode:
+            return self.visit_print_array(right)
+
+        if self.memory[self.pointer] == Type.CHAR:
+            return self.visit_print_char(right)
+        
+        if self.memory[self.pointer] == Type.INT:
+            return self.visit_print_integer(self.visit(right))
+
+        if self.memory[self.pointer] == Type.BOOL:
+            return self.visit_print_bool(self.visit(right))
+
+    def visit_print_array(self, right) -> None:
+        result = self.visit(right)
+
+        for value in right.array:
+            result += self.visit_print(value)
+            
+            result += self.right()
+        return result
+
+    def visit_print_char(self, right) -> None:
+        result = self.visit(right)
+        result += self.output()
+        return result
+
+    def visit_print_integer(self, right) -> None:
+        result = ''
+
+        temp_block = self.memory.allocate_block(8, Type.VOID)
+        temp = self.memory.allocate(Type.INT)
+        result += self.bf_parse('t0[-]tb[-]x[-t0+tb+x]t0[-x+t0]tb>[-]>[-]+>[-]+<[>[-<-<<[->+>+<<]>[-<+>]>>]++++++++++>[-]+>[-]>[-]>[-]<<<<<[->-[>+>>]>[[-<+>]+>+>>]<<<<<]>>-[-<<+>>]<[-]++++++++[-<++++++>]>>[-<<+>>]<<]<[.[-]<]<x',
+            tb = temp_block,
+            t0 = temp,
+            x = self.pointer
+        )
+
+        self.memory.rmv(*(temp_block + i for i in range(8)))
+        return result
+
+    def visit_print_bool(self, right) -> None:
+        result = ''
+
+        temp_block = self.memory.allocate_block(4, Type.CHAR)
+
+        result += self.bf_parse('t[-]+>[-]<x[t>>>+++++++++++[<++++++++++>-]<++++++.--.+++.>++++[<---->-]<.[-]<<-x[t>+<x-]]t>[<x+t>-]<[>>>++++++++++[<++++++++++>-]<++.-----.+++++++++++.+++++++.>+++++[<--->-]<+.[-]<<-]',
+            t = temp_block,
+            x = self.pointer
+        )
+
+        self.memory.rmv(*(temp_block + i for i in range(4)))
+        return result
+    
+    def visit_var_declaration(self, type_, right) -> None:
+        result = ''
+
+        str_to_type = {'int': Type.INT, 'char': Type.CHAR, 'bool': Type.BOOL}
+        new_variable = right.left if type(right) == BinaryOpNode else right
+
+        if type(new_variable) == ArrayAccessNode:
+            self.arrays[new_variable.array_title] = {
+                'position': self.memory.allocate_block(new_variable.index.value, str_to_type[type_]),
+                'size': new_variable.index.value,
+                'type': str_to_type[type_]
+            }
+            result += self.move(self.arrays[new_variable.array_title]['position'])
+        else:
+            self.aliases[new_variable.title] = self.memory.allocate(str_to_type[type_])
+            result += self.move(self.aliases[new_variable.title])
+            
+        result += self.visit(right)
+        return result
+    
+    def visit_array_access(self, left, right) -> None:
+        # FIXME: arrays have been reformatted to concise blocks of values.
+        #        in order to access variable indices, the former method
+        #        of storing arrays must be recreated as a temporary block
+        #        which will just return its own value, followed by deletion
+        #        of such block.
+        #           FORMER STORAGE: [0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0]
+        #           NEW STORAGE: [1, 2, 3, 4]
+        result = ''
+
+        temp0 = self.memory.allocate(Type.INT)
+
+        result += self.visit(node.index) or ''
+        index = self.pointer
+
+        result += self.bf_parse('t0[-]s>>[-]<<i[s>>+<<t0+i-]t0[i+t0-]s>>+[-[+>>]+[<<]>>-]>>[[-]+>>]<[-<[<<]<<+>+>>>[>>]<]<[<<]<<[->>>>[>>]<+<[<<]<<]>>>>[>>]<<[[-]<<]',
+            t0 = temp0,
+            s = self.arrays[node.array_title]['position'],
+            i = index
+        )
+        result += self.left(1)
+
+        self.memory.rmv(temp0)
+        return result
+    
+    def visit_array_literal(self, array) -> None:
+        # TODO: specifiy array types
+        result = ''
+
+        array_address = self.memory.allocate_block(len(array), Type.INT)
+        for i, array_node in enumerate(array):
+            if type(array_node) == LiteralNode:
+                result += self.move(array_address + i)
+                result += self.assign(array_node.value)
+                continue
+            result += self.visit_assign(array_address + i, array_node)
+        result += self.move(array_address)
+        return result
+    
+    # Brainfuck Parsing
     
     def bf_parse(self, bf: str, **mapping: Union[Callable, List[Callable]]):
         def repl(id_str):
             if type(mapping[id_str]) == int:
                 return self.move(mapping[id_str])
+            if callable(mapping[id_str]):
+                return mapping[id_str]()
             total = ''
             returned = 0
             for child in mapping[id_str]:
