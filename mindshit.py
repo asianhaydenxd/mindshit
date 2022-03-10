@@ -1132,8 +1132,9 @@ class Compiler:
                 result += self.visit(node.args[0])
 
                 if type(node.args[0]) == ArrayNode:
-                    for _ in range(len(node.args[0].array) + 1):
-                        result += self.output()
+                    for value in node.args[0].array:
+                        result += self.visit(FunctionOpNode(Token(Tk.KW, 'print'), [value]))
+                        
                         result += self.right()
                     return result
 
@@ -1144,7 +1145,7 @@ class Compiler:
                 if self.memory[self.pointer] == Type.INT:
                     temp_block = self.memory.allocate_block(8, Type.VOID)
                     temp = self.memory.allocate(Type.INT)
-                    result += self.bf_parse('t0[-]tb[-]x[-t0+tb+x]t0[-x+t0]tb>[-]>[-]+>[-]+<[>[-<-<<[->+>+<<]>[-<+>]>>]++++++++++>[-]+>[-]>[-]>[-]<<<<<[->-[>+>>]>[[-<+>]+>+>>]<<<<<]>>-[-<<+>>]<[-]++++++++[-<++++++>]>>[-<<+>>]<<]<[.[-]<]<',
+                    result += self.bf_parse('t0[-]tb[-]x[-t0+tb+x]t0[-x+t0]tb>[-]>[-]+>[-]+<[>[-<-<<[->+>+<<]>[-<+>]>>]++++++++++>[-]+>[-]>[-]>[-]<<<<<[->-[>+>>]>[[-<+>]+>+>>]<<<<<]>>-[-<<+>>]<[-]++++++++[-<++++++>]>>[-<<+>>]<<]<[.[-]<]<x',
                         tb = temp_block,
                         t0 = temp,
                         x = self.pointer
