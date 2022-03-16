@@ -165,6 +165,15 @@ class Type:
     BOOL = 'bool' # Boolean (true/false)
     VOID = 'void' # Void (programmer-inaccessible)
 
+    @staticmethod
+    def str_to_type(typestring):
+        if typestring == 'int':
+            return Type.INT
+        if typestring == 'char':
+            return Type.CHAR
+        if typestring == 'bool':
+            return Type.BOOL
+
 class Token:
     def __init__(self, type_: str, value: str = None, start: Position = None, end: Position = None) -> None:
         self.type = type_
@@ -1290,20 +1299,17 @@ class Compiler:
 
         if self.memory[self.pointer] == Type.CHAR:
             return self.visit_print_char(right)
-        
-        if self.memory[self.pointer] == Type.INT:
-            return self.visit_print_integer(self.visit(right))
 
         if self.memory[self.pointer] == Type.BOOL:
-            return self.visit_print_bool(self.visit(right))
+            return self.visit_print_bool(right)
+
+        return self.visit_print_integer(right)
 
     def visit_print_array(self, right) -> None:
         result = self.visit(right)
 
         for value in right.array:
             result += self.visit_print(value)
-            
-            result += self.right()
         return result
 
     def visit_print_char(self, right) -> None:
@@ -1312,7 +1318,7 @@ class Compiler:
         return result
 
     def visit_print_integer(self, right) -> None:
-        result = ''
+        result = self.visit(right)
 
         temp_block = self.memory.allocate_block(8, Type.VOID)
         temp = self.memory.allocate(Type.INT)
@@ -1326,7 +1332,7 @@ class Compiler:
         return result
 
     def visit_print_bool(self, right) -> None:
-        result = ''
+        result = self.visit(right)
 
         temp_block = self.memory.allocate_block(4, Type.CHAR)
 
@@ -1341,18 +1347,17 @@ class Compiler:
     def visit_var_declaration(self, type_, right) -> None:
         result = ''
 
-        str_to_type = {'int': Type.INT, 'char': Type.CHAR, 'bool': Type.BOOL}
         new_variable = right.left if type(right) == BinaryOpNode else right
 
         if type(new_variable) == ArrayAccessNode:
             self.arrays[new_variable.array_title] = {
-                'position': self.memory.allocate_block(new_variable.index.value, str_to_type[type_]),
+                'position': self.memory.allocate_block(new_variable.index.value, Type.str_to_type(type_)),
                 'size': new_variable.index.value,
-                'type': str_to_type[type_]
+                'type': Type.str_to_type(type_)
             }
             result += self.move(self.arrays[new_variable.array_title]['position'])
         else:
-            self.aliases[new_variable.title] = self.memory.allocate(str_to_type[type_])
+            self.aliases[new_variable.title] = self.memory.allocate(Type.str_to_type(type_))
             result += self.move(self.aliases[new_variable.title])
             
         result += self.visit(right)
@@ -1378,7 +1383,7 @@ class Compiler:
             s = self.arrays[node.array_title]['position'],
             i = index
         )
-        result += self.left(1)
+        result += self.left()
 
         self.memory.rmv(temp0)
         return result
@@ -1386,8 +1391,8 @@ class Compiler:
     def visit_array_literal(self, array) -> None:
         # TODO: specifiy array types
         result = ''
-
-        array_address = self.memory.allocate_block(len(array), Type.INT)
+        
+        array_address = self.memory.allocate_block(len(array), Type.str_to_type(array[0].type))
         for i, array_node in enumerate(array):
             if type(array_node) == LiteralNode:
                 result += self.move(array_address + i)
@@ -1518,5 +1523,5 @@ def main():
     else:
         import brainfuck
         brainfuck.evaluate(bf)
-        
+
 if __name__ == '__main__': main()
