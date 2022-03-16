@@ -1294,19 +1294,24 @@ class Compiler:
         return result
     
     def visit_print(self, right) -> None:
+        result = self.visit(right)
+
         if type(right) == ArrayNode:
-            return self.visit_print_array(right)
+            result += self.visit_print_array(right)
 
-        if self.memory[self.pointer] == Type.CHAR:
-            return self.visit_print_char(right)
+        elif self.memory[self.pointer] == Type.CHAR:
+            result += self.visit_print_char(right)
 
-        if self.memory[self.pointer] == Type.BOOL:
-            return self.visit_print_bool(right)
+        elif self.memory[self.pointer] == Type.BOOL:
+            result += self.visit_print_bool(right)
 
-        return self.visit_print_integer(right)
+        else:
+            result += self.visit_print_integer(right)
+        
+        return result
 
     def visit_print_array(self, right) -> None:
-        result = self.visit(right)
+        result = ''
 
         for value in right.array:
             result += self.visit_print(value)
@@ -1318,7 +1323,7 @@ class Compiler:
         return result
 
     def visit_print_integer(self, right) -> None:
-        result = self.visit(right)
+        result = ''
 
         temp_block = self.memory.allocate_block(8, Type.VOID)
         temp = self.memory.allocate(Type.INT)
@@ -1332,7 +1337,7 @@ class Compiler:
         return result
 
     def visit_print_bool(self, right) -> None:
-        result = self.visit(right)
+        result = ''
 
         temp_block = self.memory.allocate_block(4, Type.CHAR)
 
